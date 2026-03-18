@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import HomePage from "./components/HomePage";
 import ManufacturerLogin from "./components/ManufacturerLogin";
+import ManufacturerOtp from "./components/ManufacturerOtp";
 import ManufacturerSignup from "./components/ManufacturerSignup";
 import ManufacturerDashboard from "./components/ManufacturerDashboard";
 
@@ -32,6 +33,9 @@ export default function App() {
   const [loadingAuth, setLoadingAuth] = useState(false);
   const [loginError, setLoginError] = useState("");
   const [signupError, setSignupError] = useState("");
+  const [otpError, setOtpError] = useState("");
+  const [otpCode, setOtpCode] = useState("");
+  const [otpFlow, setOtpFlow] = useState(null);
   const [activeManufacturer, setActiveManufacturer] = useState(null);
   const [authToken, setAuthToken] = useState(
     () => window.localStorage.getItem(MANUFACTURER_TOKEN_KEY) || ""
@@ -208,11 +212,14 @@ export default function App() {
         return;
       }
 
-      setView("manufacturer-login");
-      setLoginForm({
-        email: data.manufacturer?.officialEmail || signupForm.officialEmail,
-        password: "",
+      setOtpCode("");
+      setOtpFlow({
+        purpose: "signup",
+        email: signupForm.officialEmail.trim().toLowerCase(),
+        message: data.message,
+        devOtp: data.devOtp || "",
       });
+      setView("manufacturer-otp");
 
       setSignupForm({
         companyName: "",
@@ -253,7 +260,39 @@ export default function App() {
       const data = await response.json();
 
       if (!response.ok) {
-        setLoginError(data.error || "Login failed.");
+        if (data.requiresOtp) {
+          setOtpCode("");
+          setOtpError("");
+          setOtpFlow({
+            purpose: data.otpPurpose || "signup",
+            email: loginForm.email.trim().toLowerCase(),
+            message: data.message,
+            devOtp: data.devOtp || "",
+          });
+          setView("manufacturer-otp");
+          return;
+        }
+        if (typeof data.loginAttemptsRemaining === "number") {
+          setLoginError(
+            data.error ||
+              `Login failed. ${data.loginAttemptsRemaining} attempts remaining.`
+          );
+        } else {
+          setLoginError(data.error || "Login failed.");
+        }
+        return;
+      }
+
+      if (data.requiresOtp) {
+        setOtpCode("");
+        setOtpError("");
+        setOtpFlow({
+          purpose: data.otpPurpose || "login",
+          email: loginForm.email.trim().toLowerCase(),
+          message: data.message,
+          devOtp: data.devOtp || "",
+        });
+        setView("manufacturer-otp");
         return;
       }
 
@@ -263,6 +302,97 @@ export default function App() {
       setView("manufacturer-dashboard");
     } catch (error) {
       setLoginError("Unable to login. Make sure the backend is running.");
+    } finally {
+      setLoadingAuth(false);
+    }
+  };
+
+  const handleVerifyOtp = async () => {
+    setOtpError("");
+
+    if (!otpFlow?.email || !otpFlow?.purpose) {
+      setOtpError("OTP verification session is missing.");
+      return;
+    }
+
+    if (otpCode.length !== 6) {
+      setOtpError("Enter the 6-digit OTP.");
+      return;
+    }
+
+    setLoadingAuth(true);
+    try {
+      const route =
+        otpFlow.purpose === "signup"
+          ? "/manufacturers/verify-signup-otp"
+          : "/manufacturers/verify-login-otp";
+
+      const response = await fetch(`${API_BASE_URL}${route}`, {
+        method: "POST",
+        headers: REQUEST_HEADERS,
+        body: JSON.stringify({
+          email: otpFlow.email,
+          otp: otpCode,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        setOtpError(data.error || "OTP verification failed.");
+        return;
+      }
+
+      window.localStorage.setItem(MANUFACTURER_TOKEN_KEY, data.token);
+      setAuthToken(data.token);
+      setActiveManufacturer(data.manufacturer);
+      setOtpFlow(null);
+      setOtpCode("");
+      setView("manufacturer-dashboard");
+    } catch (error) {
+      setOtpError("Unable to verify OTP. Make sure the backend is running.");
+    } finally {
+      setLoadingAuth(false);
+    }
+  };
+
+  const handleResendOtp = async () => {
+    setOtpError("");
+
+    if (!otpFlow?.email || !otpFlow?.purpose) {
+      setOtpError("OTP verification session is missing.");
+      return;
+    }
+
+    setLoadingAuth(true);
+    try {
+      const response = await fetch(`${API_BASE_URL}/manufacturers/resend-otp`, {
+        method: "POST",
+        headers: REQUEST_HEADERS,
+        body: JSON.stringify({
+          email: otpFlow.email,
+          purpose: otpFlow.purpose,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        setOtpError(data.error || "Failed to resend OTP.");
+        return;
+      }
+
+      setOtpFlow((prev) =>
+        prev
+          ? {
+              ...prev,
+              message: data.message,
+              devOtp: data.devOtp || "",
+            }
+          : prev
+      );
+    } catch (error) {
+      setOtpError("Unable to resend OTP. Make sure the backend is running.");
     } finally {
       setLoadingAuth(false);
     }
@@ -284,6 +414,29 @@ export default function App() {
         }}
         loading={loadingAuth}
         loginError={loginError}
+      />
+    );
+  }
+
+  if (view === "manufacturer-otp") {
+    return (
+      <ManufacturerOtp
+        otpCode={otpCode}
+        setOtpCode={setOtpCode}
+        otpFlow={otpFlow}
+        loading={loadingAuth}
+        error={otpError}
+        onVerify={handleVerifyOtp}
+        onResend={handleResendOtp}
+        onBack={() => {
+          setOtpError("");
+          setOtpCode("");
+          if (otpFlow?.purpose === "signup") {
+            setView("manufacturer-signup");
+          } else {
+            setView("manufacturer-login");
+          }
+        }}
       />
     );
   }
@@ -317,6 +470,8 @@ export default function App() {
           window.localStorage.removeItem(MANUFACTURER_TOKEN_KEY);
           setAuthToken("");
           setActiveManufacturer(null);
+          setOtpFlow(null);
+          setOtpCode("");
           setView("home");
         }}
       />
