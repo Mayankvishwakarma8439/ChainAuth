@@ -6,6 +6,7 @@ import ManufacturerDashboard from "./components/ManufacturerDashboard";
 
 const API_BASE_URL = `http://${window.location.hostname}:3000/api`;
 const REQUEST_HEADERS = { "Content-Type": "application/json" };
+const MANUFACTURER_TOKEN_KEY = "manufacturer_auth_token";
 
 export default function App() {
   const [view, setView] = useState("home");
@@ -32,10 +33,54 @@ export default function App() {
   const [loginError, setLoginError] = useState("");
   const [signupError, setSignupError] = useState("");
   const [activeManufacturer, setActiveManufacturer] = useState(null);
+  const [authToken, setAuthToken] = useState(
+    () => window.localStorage.getItem(MANUFACTURER_TOKEN_KEY) || ""
+  );
 
   useEffect(() => {
     checkHealth();
   }, []);
+
+  useEffect(() => {
+    if (!authToken) {
+      return;
+    }
+
+    let cancelled = false;
+
+    const restoreSession = async () => {
+      try {
+        const response = await fetch(`${API_BASE_URL}/manufacturers/me`, {
+          headers: {
+            Authorization: `Bearer ${authToken}`,
+          },
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.error || "Session restore failed.");
+        }
+
+        if (!cancelled) {
+          setActiveManufacturer(data.manufacturer);
+          setView("manufacturer-dashboard");
+        }
+      } catch (error) {
+        if (!cancelled) {
+          window.localStorage.removeItem(MANUFACTURER_TOKEN_KEY);
+          setAuthToken("");
+          setActiveManufacturer(null);
+        }
+      }
+    };
+
+    restoreSession();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [authToken]);
 
   const normalizedImei = useMemo(
     () => verificationInput.replace(/\D/g, "").slice(0, 15),
@@ -212,6 +257,8 @@ export default function App() {
         return;
       }
 
+      window.localStorage.setItem(MANUFACTURER_TOKEN_KEY, data.token);
+      setAuthToken(data.token);
       setActiveManufacturer(data.manufacturer);
       setView("manufacturer-dashboard");
     } catch (error) {
@@ -265,7 +312,10 @@ export default function App() {
     return (
       <ManufacturerDashboard
         manufacturer={activeManufacturer}
+        authToken={authToken}
         onLogout={() => {
+          window.localStorage.removeItem(MANUFACTURER_TOKEN_KEY);
+          setAuthToken("");
           setActiveManufacturer(null);
           setView("home");
         }}

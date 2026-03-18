@@ -1,9 +1,15 @@
+require("dotenv").config();
+
 const express = require("express");
 const { Web3 } = require("web3");
 const cors = require("cors");
 const fs = require("fs");
 const path = require("path");
-const crypto = require("crypto");
+const mongoose = require("mongoose");
+const bcrypt = require("bcryptjs");
+const jwt = require("jsonwebtoken");
+
+const Manufacturer = require("./models/Manufacturer");
 
 const app = express();
 app.use(cors());
@@ -13,7 +19,11 @@ BigInt.prototype.toJSON = function () {
   return this.toString();
 };
 
-const web3 = new Web3("http://127.0.0.1:8545");
+const PORT = Number(process.env.PORT) || 3000;
+const MONGODB_URI =
+  process.env.MONGODB_URI || "mongodb://127.0.0.1:27017/product_registry";
+const JWT_SECRET = process.env.JWT_SECRET || "change-this-in-production";
+const web3 = new Web3(process.env.WEB3_PROVIDER || "http://127.0.0.1:8545");
 
 const contractPath = path.join(
   __dirname,
@@ -26,45 +36,37 @@ let contractAddress = process.env.CONTRACT_ADDRESS || null;
 let contract = null;
 let accounts = [];
 
-const MANUFACTURERS_FILE = path.join(__dirname, "data", "manufacturers.json");
-const PASSWORD_KEYLEN = 64;
-
-function ensureManufacturersFile() {
-  try {
-    if (!fs.existsSync(MANUFACTURERS_FILE)) {
-      fs.mkdirSync(path.dirname(MANUFACTURERS_FILE), { recursive: true });
-      fs.writeFileSync(MANUFACTURERS_FILE, "[]");
-    }
-  } catch (error) {
-    console.error("Failed to initialize manufacturers store:", error);
-  }
-}
-
-function loadManufacturers() {
-  ensureManufacturersFile();
-  try {
-    const raw = fs.readFileSync(MANUFACTURERS_FILE, "utf8");
-    const data = JSON.parse(raw);
-    return Array.isArray(data) ? data : [];
-  } catch (error) {
-    console.error("Failed to read manufacturers store:", error);
-    return [];
-  }
-}
-
-function saveManufacturers(records) {
-  ensureManufacturersFile();
-  fs.writeFileSync(MANUFACTURERS_FILE, JSON.stringify(records, null, 2));
-}
-
-function hashPassword(password, salt) {
-  return crypto.scryptSync(password, salt, PASSWORD_KEYLEN).toString("hex");
-}
-
 function sanitizeManufacturer(record) {
   if (!record) return null;
-  const { passwordHash, passwordSalt, ...safe } = record;
-  return safe;
+
+  return {
+    id: record._id?.toString() || record.id,
+    companyName: record.companyName,
+    registrationNumber: record.registrationNumber,
+    officialEmail: record.officialEmail,
+    contactNumber: record.contactNumber,
+    country: record.country,
+    walletAddress: record.walletAddress,
+    status: record.status,
+    createdAt: record.createdAt,
+    updatedAt: record.updatedAt,
+  };
+}
+
+function createToken(manufacturer) {
+  return jwt.sign(
+    {
+      manufacturerId: manufacturer._id.toString(),
+      officialEmail: manufacturer.officialEmail,
+    },
+    JWT_SECRET,
+    { expiresIn: "7d" }
+  );
+}
+
+async function connectDatabase() {
+  await mongoose.connect(MONGODB_URI);
+  console.log("MongoDB connected");
 }
 
 async function initContract() {
@@ -90,55 +92,86 @@ async function initContract() {
   }
 }
 
-app.post("/api/register-product", async (req, res) => {
+async function requireManufacturerAuth(req, res, next) {
   try {
-    if (!contract) {
-      return res.status(500).json({ error: "Contract not initialized" });
+    const authorization = req.headers.authorization || "";
+    const token = authorization.startsWith("Bearer ")
+      ? authorization.slice(7)
+      : null;
+
+    if (!token) {
+      return res.status(401).json({ error: "Authentication token is required" });
     }
 
-    const { imeiNumber, productName, brand, model } = req.body;
+    const payload = jwt.verify(token, JWT_SECRET);
+    const manufacturer = await Manufacturer.findById(payload.manufacturerId);
 
-    if (!imeiNumber || !productName || !brand || !model) {
-      return res.status(400).json({ error: "All fields are required" });
+    if (!manufacturer) {
+      return res.status(401).json({ error: "Invalid authentication token" });
     }
 
-    const exists = await contract.methods
-      .isProductRegistered(imeiNumber)
-      .call();
-    if (exists) {
-      return res
-        .status(400)
-        .json({ error: "Product with this IMEI already registered" });
-    }
-
-    const result = await contract.methods
-      .registerProduct(imeiNumber, productName, brand, model)
-      .send({
-        from: accounts[0],
-        gas: 500000,
-      });
-
-    res.json({
-      success: true,
-      message: "Product registered successfully",
-      transactionHash: result.transactionHash,
-      blockNumber: Number(result.blockNumber),
-      gasUsed: Number(result.gasUsed),
-      data: {
-        imeiNumber,
-        productName,
-        brand,
-        model,
-      },
-    });
+    req.manufacturer = manufacturer;
+    req.authToken = token;
+    next();
   } catch (error) {
-    console.error("Error registering product:", error);
-    res.status(500).json({
-      error: "Failed to register product",
-      details: error.message,
-    });
+    return res.status(401).json({ error: "Invalid or expired token" });
   }
-});
+}
+
+app.post(
+  "/api/register-product",
+  requireManufacturerAuth,
+  async (req, res) => {
+    try {
+      if (!contract) {
+        return res.status(500).json({ error: "Contract not initialized" });
+      }
+
+      const { imeiNumber, productName, brand, model } = req.body;
+
+      if (!imeiNumber || !productName || !brand || !model) {
+        return res.status(400).json({ error: "All fields are required" });
+      }
+
+      const exists = await contract.methods
+        .isProductRegistered(imeiNumber)
+        .call();
+      if (exists) {
+        return res
+          .status(400)
+          .json({ error: "Product with this IMEI already registered" });
+      }
+
+      const result = await contract.methods
+        .registerProduct(imeiNumber, productName, brand, model)
+        .send({
+          from: accounts[0],
+          gas: 500000,
+        });
+
+      res.json({
+        success: true,
+        message: "Product registered successfully",
+        transactionHash: result.transactionHash,
+        blockNumber: Number(result.blockNumber),
+        gasUsed: Number(result.gasUsed),
+        manufacturer: sanitizeManufacturer(req.manufacturer),
+        data: {
+          imeiNumber,
+          productName,
+          brand,
+          model,
+        },
+      });
+    } catch (error) {
+      console.error("Error registering product:", error);
+      res.status(500).json({
+        error: "Failed to register product",
+        details: error.message,
+      });
+    }
+  }
+);
 
 app.get("/api/verify-product/:imeiNumber", async (req, res) => {
   try {
@@ -198,7 +231,7 @@ app.get("/api/accounts", async (req, res) => {
   }
 });
 
-app.post("/api/manufacturers/signup", (req, res) => {
+app.post("/api/manufacturers/signup", async (req, res) => {
   try {
     const {
       companyName,
@@ -224,6 +257,7 @@ app.post("/api/manufacturers/signup", (req, res) => {
 
     const normalizedEmail = String(officialEmail).trim().toLowerCase();
     const normalizedWallet = String(walletAddress).trim();
+    const normalizedRegistration = String(registrationNumber).trim();
 
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(normalizedEmail)) {
@@ -234,39 +268,44 @@ app.post("/api/manufacturers/signup", (req, res) => {
       return res.status(400).json({ error: "Invalid wallet address" });
     }
 
-    const manufacturers = loadManufacturers();
-    const emailExists = manufacturers.some(
-      (entry) => entry.officialEmail === normalizedEmail
-    );
-    if (emailExists) {
+    if (String(password).length < 8) {
       return res
-        .status(409)
-        .json({ error: "Manufacturer with this email already exists" });
+        .status(400)
+        .json({ error: "Password must be at least 8 characters" });
     }
 
-    const id = crypto.randomUUID();
-    const salt = crypto.randomBytes(16).toString("hex");
-    const passwordHash = hashPassword(String(password), salt);
+    const existingManufacturer = await Manufacturer.findOne({
+      $or: [
+        { officialEmail: normalizedEmail },
+        { registrationNumber: normalizedRegistration },
+        { walletAddress: normalizedWallet },
+      ],
+    });
 
-    const record = {
-      id,
+    if (existingManufacturer) {
+      return res.status(409).json({
+        error:
+          "Manufacturer with this email, registration number, or wallet address already exists",
+      });
+    }
+
+    const passwordHash = await bcrypt.hash(String(password), 12);
+    const manufacturer = await Manufacturer.create({
       companyName: String(companyName).trim(),
-      registrationNumber: String(registrationNumber).trim(),
+      registrationNumber: normalizedRegistration,
       officialEmail: normalizedEmail,
       contactNumber: String(contactNumber).trim(),
       country: String(country).trim(),
       walletAddress: normalizedWallet,
       passwordHash,
-      passwordSalt: salt,
-      createdAt: new Date().toISOString(),
-    };
+    });
 
-    manufacturers.push(record);
-    saveManufacturers(manufacturers);
+    const token = createToken(manufacturer);
 
     return res.status(201).json({
       success: true,
-      manufacturer: sanitizeManufacturer(record),
+      token,
+      manufacturer: sanitizeManufacturer(manufacturer),
     });
   } catch (error) {
     console.error("Manufacturer signup failed:", error);
@@ -277,7 +316,7 @@ app.post("/api/manufacturers/signup", (req, res) => {
   }
 });
 
-app.post("/api/manufacturers/login", (req, res) => {
+app.post("/api/manufacturers/login", async (req, res) => {
   try {
     const { email, password } = req.body || {};
 
@@ -286,23 +325,29 @@ app.post("/api/manufacturers/login", (req, res) => {
     }
 
     const normalizedEmail = String(email).trim().toLowerCase();
-    const manufacturers = loadManufacturers();
-    const record = manufacturers.find(
-      (entry) => entry.officialEmail === normalizedEmail
+    const manufacturer = await Manufacturer.findOne({
+      officialEmail: normalizedEmail,
+    });
+
+    if (!manufacturer) {
+      return res.status(401).json({ error: "Invalid credentials" });
+    }
+
+    const passwordMatches = await bcrypt.compare(
+      String(password),
+      manufacturer.passwordHash
     );
 
-    if (!record) {
+    if (!passwordMatches) {
       return res.status(401).json({ error: "Invalid credentials" });
     }
 
-    const attemptedHash = hashPassword(String(password), record.passwordSalt);
-    if (attemptedHash !== record.passwordHash) {
-      return res.status(401).json({ error: "Invalid credentials" });
-    }
+    const token = createToken(manufacturer);
 
     return res.json({
       success: true,
-      manufacturer: sanitizeManufacturer(record),
+      token,
+      manufacturer: sanitizeManufacturer(manufacturer),
     });
   } catch (error) {
     console.error("Manufacturer login failed:", error);
@@ -313,29 +358,44 @@ app.post("/api/manufacturers/login", (req, res) => {
   }
 });
 
-// Health check
+app.get("/api/manufacturers/me", requireManufacturerAuth, async (req, res) => {
+  return res.json({
+    success: true,
+    manufacturer: sanitizeManufacturer(req.manufacturer),
+  });
+});
+
 app.get("/api/health", (req, res) => {
   res.json({
     status: "OK",
-    contractAddress: contractAddress,
+    contractAddress,
     contractInitialized: !!contract,
+    mongoConnected: mongoose.connection.readyState === 1,
   });
 });
 
-const PORT = process.env.PORT || 3000;
+async function startServer() {
+  try {
+    await connectDatabase();
+    await initContract();
 
-// Start server after contract initialization
-initContract().then(() => {
-  app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
-    console.log(`API endpoints:`);
-    console.log(`- POST http://localhost:${PORT}/api/register-product`);
-    console.log(
-      `- GET  http://localhost:${PORT}/api/verify-product/:imeiNumber`
-    );
-    console.log(`- POST http://localhost:${PORT}/api/manufacturers/signup`);
-    console.log(`- POST http://localhost:${PORT}/api/manufacturers/login`);
-    console.log(`- GET  http://localhost:${PORT}/api/accounts`);
-    console.log(`- GET  http://localhost:${PORT}/api/health`);
-  });
-});
+    app.listen(PORT, () => {
+      console.log(`Server running on port ${PORT}`);
+      console.log(`API endpoints:`);
+      console.log(`- POST http://localhost:${PORT}/api/register-product`);
+      console.log(
+        `- GET  http://localhost:${PORT}/api/verify-product/:imeiNumber`
+      );
+      console.log(`- POST http://localhost:${PORT}/api/manufacturers/signup`);
+      console.log(`- POST http://localhost:${PORT}/api/manufacturers/login`);
+      console.log(`- GET  http://localhost:${PORT}/api/manufacturers/me`);
+      console.log(`- GET  http://localhost:${PORT}/api/accounts`);
+      console.log(`- GET  http://localhost:${PORT}/api/health`);
+    });
+  } catch (error) {
+    console.error("Server startup failed:", error);
+    process.exit(1);
+  }
+}
+
+startServer();
