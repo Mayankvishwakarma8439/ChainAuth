@@ -44,13 +44,13 @@ function ResultBanner({ result }) {
     <div
       className={`rounded-2xl border px-4 py-3 text-sm ${
         result.type === "success"
-          ? "border-emerald-400/30 bg-emerald-400/10 text-emerald-200"
-          : "border-rose-400/30 bg-rose-400/10 text-rose-200"
+          ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+          : "border-rose-200 bg-rose-50 text-rose-600"
       }`}
     >
       <p>{result.message}</p>
       {result.tx && (
-        <p className="mt-2 break-all text-xs text-slate-300">
+        <p className="mt-2 break-all text-xs text-slate-600">
           Transaction: {result.tx}
         </p>
       )}
@@ -88,19 +88,19 @@ export default function ManufacturerDashboard({
     {
       label: "Account Status",
       value: manufacturer?.status || "pending",
-      tone: "text-emerald-200",
+      tone: "text-emerald-700",
     },
     {
       label: "Wallet Address",
       value: manufacturer?.walletAddress
         ? `${manufacturer.walletAddress.slice(0, 8)}...${manufacturer.walletAddress.slice(-6)}`
         : "Unavailable",
-      tone: "text-cyan-200",
+      tone: "text-sky-700",
     },
     {
       label: "Portal Scope",
       value: "Private Manufacturer Workspace",
-      tone: "text-amber-200",
+      tone: "text-slate-700",
     },
   ];
 
@@ -236,7 +236,8 @@ export default function ManufacturerDashboard({
       if (!response.ok || !data.isValid) {
         setVerifyResult({
           type: "error",
-          message: data.message || data.error || "Product not found in registry.",
+          message:
+            data.message || data.error || "Product not found in registry.",
         });
         return;
       }
@@ -257,48 +258,48 @@ export default function ManufacturerDashboard({
   };
 
   return (
-    <div className="min-h-screen overflow-hidden bg-slate-950 text-slate-100">
+    <div className="min-h-screen overflow-hidden bg-slate-100 text-slate-900">
       <div className="pointer-events-none absolute inset-0">
-        <div className="absolute left-0 top-0 h-72 w-72 rounded-full bg-cyan-500/15 blur-3xl" />
-        <div className="absolute bottom-0 right-10 h-80 w-80 rounded-full bg-emerald-500/10 blur-3xl" />
+        <div className="absolute left-0 top-0 h-72 w-72 rounded-full bg-sky-200/70 blur-3xl" />
+        <div className="absolute bottom-0 right-10 h-80 w-80 rounded-full bg-white blur-3xl" />
       </div>
 
       <div className="relative z-10 mx-auto flex min-h-screen max-w-7xl flex-col px-4 py-6 sm:px-6 lg:px-8">
-        <header className="rounded-3xl border border-slate-800 bg-slate-900/90 p-5 shadow-2xl backdrop-blur">
+        <header className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div className="flex items-start gap-4">
-              <div className="rounded-2xl border border-cyan-400/40 bg-cyan-400/10 p-3">
-                <Blocks className="h-8 w-8 text-cyan-300" />
+              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3">
+                <Blocks className="h-8 w-8 text-sky-700" />
               </div>
               <div>
-                <div className="inline-flex items-center gap-2 rounded-full border border-cyan-400/25 bg-cyan-400/10 px-3 py-1 text-xs text-cyan-200">
+                <div className="inline-flex items-center gap-2 rounded-full border border-sky-200 bg-sky-50 px-3 py-1 text-xs text-sky-700">
                   <ShieldCheck className="h-3.5 w-3.5" />
                   Separate Manufacturer Workspace
                 </div>
                 <h1 className="mt-3 text-3xl font-semibold tracking-tight">
-                  Manufacturer Command Dashboard
+                  Manufacturer Dashboard
                 </h1>
-                <p className="mt-2 max-w-2xl text-sm text-slate-300">
-                  Manage private manufacturer operations without mixing them into the public user verification portal.
+                <p className="mt-2 max-w-2xl text-sm text-slate-600">
+                  Manage private manufacturer operations here...
                 </p>
               </div>
             </div>
 
             <div className="flex flex-wrap items-center gap-3">
-              <div className="rounded-2xl border border-slate-800 bg-slate-950/80 px-4 py-3 text-right">
-                <p className="text-xs uppercase tracking-widest text-slate-500">
+              <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-right">
+                <p className="text-xs uppercase tracking-widest text-slate-600">
                   Signed In As
                 </p>
-                <p className="mt-1 text-sm font-semibold text-slate-100">
+                <p className="mt-1 text-sm font-semibold text-slate-900">
                   {manufacturer?.companyName}
                 </p>
-                <p className="text-xs text-slate-400">
+                <p className="text-xs text-slate-600">
                   {manufacturer?.officialEmail}
                 </p>
               </div>
               <button
                 onClick={onLogout}
-                className="inline-flex items-center rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-sm font-medium text-slate-200 transition hover:border-slate-500"
+                className="inline-flex items-center rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm font-medium text-slate-700 transition hover:border-slate-400"
               >
                 <LogOut className="mr-2 h-4 w-4" />
                 Logout
@@ -308,8 +309,8 @@ export default function ManufacturerDashboard({
         </header>
 
         <div className="mt-6 grid flex-1 gap-6 lg:grid-cols-[280px_minmax(0,1fr)]">
-          <aside className="rounded-3xl border border-slate-800 bg-slate-900/90 p-5 shadow-xl">
-            <p className="text-xs font-semibold uppercase tracking-[0.3em] text-cyan-300">
+          <aside className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+            <p className="text-xs font-semibold uppercase tracking-[0.3em] text-sky-700">
               Workspace
             </p>
             <div className="mt-4 space-y-3">
@@ -322,19 +323,19 @@ export default function ManufacturerDashboard({
                     onClick={() => setActiveSection(section.id)}
                     className={`w-full rounded-2xl border p-4 text-left transition ${
                       isActive
-                        ? "border-cyan-300/40 bg-cyan-400/10"
-                        : "border-slate-800 bg-slate-950 hover:border-slate-600"
+                        ? "border-sky-200 bg-sky-50"
+                        : "border-slate-200 bg-white hover:border-slate-300"
                     }`}
                   >
                     <div className="flex items-center gap-3">
                       <Icon
                         className={`h-5 w-5 ${
-                          isActive ? "text-cyan-300" : "text-slate-400"
+                          isActive ? "text-sky-700" : "text-slate-600"
                         }`}
                       />
                       <div>
                         <p className="text-sm font-semibold">{section.title}</p>
-                        <p className="mt-1 text-xs text-slate-400">
+                        <p className="mt-1 text-xs text-slate-600">
                           {section.description}
                         </p>
                       </div>
@@ -343,18 +344,6 @@ export default function ManufacturerDashboard({
                 );
               })}
             </div>
-
-            <div className="mt-6 rounded-2xl border border-emerald-400/20 bg-emerald-400/10 p-4">
-              <div className="flex items-center gap-2">
-                <Sparkles className="h-4 w-4 text-emerald-300" />
-                <p className="text-sm font-semibold text-emerald-200">
-                  Manufacturer Identity
-                </p>
-              </div>
-              <p className="mt-2 text-xs text-slate-300">
-                This dashboard is isolated from the public user verification flow. Internal checks and product issuance stay in this private area.
-              </p>
-            </div>
           </aside>
 
           <section className="space-y-6">
@@ -362,9 +351,9 @@ export default function ManufacturerDashboard({
               {manufacturerStats.map((stat) => (
                 <div
                   key={stat.label}
-                  className="rounded-2xl border border-slate-800 bg-slate-900/90 p-5 shadow-xl"
+                  className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"
                 >
-                  <p className="text-xs uppercase tracking-wider text-slate-500">
+                  <p className="text-xs uppercase tracking-wider text-slate-600">
                     {stat.label}
                   </p>
                   <p className={`mt-2 text-base font-semibold ${stat.tone}`}>
@@ -376,15 +365,16 @@ export default function ManufacturerDashboard({
 
             {activeSection === "overview" && (
               <div className="grid gap-6 xl:grid-cols-[1.3fr_0.9fr]">
-                <div className="rounded-3xl border border-slate-800 bg-gradient-to-br from-slate-900 to-slate-950 p-6 shadow-xl">
+                <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
                   <div className="flex items-center gap-3">
-                    <Factory className="h-6 w-6 text-cyan-300" />
+                    <Factory className="h-6 w-6 text-sky-700" />
                     <div>
                       <h2 className="text-xl font-semibold">
                         Manufacturer Overview
                       </h2>
-                      <p className="text-sm text-slate-300">
-                        Use this private dashboard to issue trusted product records and run internal authenticity checks.
+                      <p className="text-sm text-slate-600">
+                        Use this private dashboard to issue trusted product
+                        records and run internal authenticity checks.
                       </p>
                     </div>
                   </div>
@@ -392,92 +382,96 @@ export default function ManufacturerDashboard({
                   <div className="mt-6 grid gap-4 md:grid-cols-2">
                     <button
                       onClick={() => setActiveSection("register")}
-                      className="rounded-2xl border border-cyan-400/30 bg-cyan-400/10 p-5 text-left transition hover:border-cyan-300 hover:bg-cyan-400/15"
+                      className="rounded-2xl border border-slate-200 bg-slate-50 p-5 text-left transition hover:border-slate-300 hover:bg-white"
                     >
-                      <p className="text-sm font-semibold text-cyan-200">
+                      <p className="text-sm font-semibold text-sky-700">
                         Register New Product
                       </p>
-                      <p className="mt-2 text-sm text-slate-300">
-                        Create a new on-chain IMEI record for an electronic device batch.
+                      <p className="mt-2 text-sm text-slate-600">
+                        Create a new on-chain IMEI record for an electronic
+                        device batch.
                       </p>
-                      <p className="mt-4 inline-flex items-center text-sm text-cyan-200">
-                        Open registration <ArrowRight className="ml-2 h-4 w-4" />
+                      <p className="mt-4 inline-flex items-center text-sm text-sky-700">
+                        Open registration{" "}
+                        <ArrowRight className="ml-2 h-4 w-4" />
                       </p>
                     </button>
 
                     <button
                       onClick={() => setActiveSection("verify")}
-                      className="rounded-2xl border border-amber-300/30 bg-amber-300/10 p-5 text-left transition hover:border-amber-300 hover:bg-amber-300/15"
+                      className="rounded-2xl border border-slate-200 bg-slate-50 p-5 text-left transition hover:border-slate-300 hover:bg-white"
                     >
-                      <p className="text-sm font-semibold text-amber-200">
+                      <p className="text-sm font-semibold text-slate-800">
                         Internal Product Verify
                       </p>
-                      <p className="mt-2 text-sm text-slate-300">
-                        Confirm whether an IMEI already exists in the blockchain registry before shipment.
+                      <p className="mt-2 text-sm text-slate-600">
+                        Confirm whether an IMEI already exists in the blockchain
+                        registry before shipment.
                       </p>
-                      <p className="mt-4 inline-flex items-center text-sm text-amber-200">
-                        Open verification <ArrowRight className="ml-2 h-4 w-4" />
+                      <p className="mt-4 inline-flex items-center text-sm text-slate-700">
+                        Open verification{" "}
+                        <ArrowRight className="ml-2 h-4 w-4" />
                       </p>
                     </button>
                   </div>
                 </div>
 
                 <div className="space-y-4">
-                  <div className="rounded-3xl border border-slate-800 bg-slate-900/90 p-6 shadow-xl">
+                  <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
                     <div className="flex items-center gap-2">
-                      <FileBadge className="h-5 w-5 text-cyan-300" />
+                      <FileBadge className="h-5 w-5 text-sky-700" />
                       <h3 className="text-lg font-semibold">
                         Manufacturer Profile
                       </h3>
                     </div>
-                    <div className="mt-4 space-y-2 text-sm text-slate-300">
+                    <div className="mt-4 space-y-2 text-sm text-slate-600">
                       <p>
-                        <span className="text-slate-500">Company:</span>{" "}
+                        <span className="text-slate-600">Company:</span>{" "}
                         {manufacturer?.companyName}
                       </p>
                       <p>
-                        <span className="text-slate-500">Registration:</span>{" "}
+                        <span className="text-slate-600">Registration:</span>{" "}
                         {manufacturer?.registrationNumber}
                       </p>
                       <p>
-                        <span className="text-slate-500">Country:</span>{" "}
+                        <span className="text-slate-600">Country:</span>{" "}
                         {manufacturer?.country}
                       </p>
                       <p>
-                        <span className="text-slate-500">Status:</span>{" "}
+                        <span className="text-slate-600">Status:</span>{" "}
                         {manufacturer?.status}
                       </p>
                     </div>
                   </div>
 
-                  <div className="rounded-3xl border border-slate-800 bg-slate-900/90 p-6 shadow-xl">
+                  <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
                     <div className="flex items-center gap-2">
-                      <BadgeCheck className="h-5 w-5 text-emerald-300" />
+                      <BadgeCheck className="h-5 w-5 text-sky-700" />
                       <h3 className="text-lg font-semibold">
                         Latest Registration
                       </h3>
                     </div>
                     {latestRegistration ? (
-                      <div className="mt-4 space-y-2 text-sm text-slate-300">
+                      <div className="mt-4 space-y-2 text-sm text-slate-600">
                         <p>
-                          <span className="text-slate-500">Product:</span>{" "}
+                          <span className="text-slate-600">Product:</span>{" "}
                           {latestRegistration.productName}
                         </p>
                         <p>
-                          <span className="text-slate-500">Brand:</span>{" "}
+                          <span className="text-slate-600">Brand:</span>{" "}
                           {latestRegistration.brand}
                         </p>
                         <p>
-                          <span className="text-slate-500">Model:</span>{" "}
+                          <span className="text-slate-600">Model:</span>{" "}
                           {latestRegistration.model}
                         </p>
                         <p>
-                          <span className="text-slate-500">IMEI:</span>{" "}
+                          <span className="text-slate-600">IMEI:</span>{" "}
                           {latestRegistration.imeiNumber}
                         </p>
                       </div>
                     ) : (
-                      <p className="mt-4 text-sm text-slate-400">
+                      <p className="mt-4 text-sm text-slate-600">
                         No product registered in this session yet.
                       </p>
                     )}
@@ -487,12 +481,12 @@ export default function ManufacturerDashboard({
             )}
 
             {activeSection === "register" && (
-              <div className="rounded-3xl border border-slate-800 bg-slate-900/95 p-6 shadow-xl">
-                <h2 className="text-xl font-semibold">
-                  Register New Product
-                </h2>
-                <p className="mt-2 text-sm text-slate-300">
-                  This form is part of the manufacturer-only workspace. Registered IMEI records are written to blockchain and remain separate from the public user portal.
+              <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+                <h2 className="text-xl font-semibold">Register New Product</h2>
+                <p className="mt-2 text-sm text-slate-600">
+                  This form is part of the manufacturer-only workspace.
+                  Registered IMEI records are written to blockchain and remain
+                  separate from the public user portal.
                 </p>
 
                 <div className="mt-6 grid gap-4 sm:grid-cols-2">
@@ -509,8 +503,8 @@ export default function ManufacturerDashboard({
                         }
                         className={`rounded-lg border px-4 py-2 transition ${
                           form.identifierType === "imei"
-                            ? "border-cyan-300 bg-cyan-300/10 text-cyan-200"
-                            : "border-slate-700 text-slate-300 hover:border-slate-500"
+                            ? "border-slate-900 bg-slate-900 text-white"
+                            : "border-slate-300 bg-white text-slate-700 hover:border-slate-400"
                         }`}
                       >
                         IMEI (On-chain)
@@ -526,15 +520,17 @@ export default function ManufacturerDashboard({
                         }
                         className={`rounded-lg border px-4 py-2 transition ${
                           form.identifierType === "mac"
-                            ? "border-amber-300 bg-amber-300/10 text-amber-200"
-                            : "border-slate-700 text-slate-300 hover:border-slate-500"
+                            ? "border-slate-900 bg-slate-900 text-white"
+                            : "border-slate-300 bg-white text-slate-700 hover:border-slate-400"
                         }`}
                       >
                         MAC (Pending Backend Support)
                       </button>
                     </div>
-                    <p className="mt-2 text-xs text-slate-400">
-                      IMEI is the active blockchain registration mode. MAC support can be added later without changing this workspace structure.
+                    <p className="mt-2 text-xs text-slate-600">
+                      IMEI is the active blockchain registration mode. MAC
+                      support can be added later without changing this workspace
+                      structure.
                     </p>
                   </div>
 
@@ -552,7 +548,7 @@ export default function ManufacturerDashboard({
                         ? "IMEI (15 digits)"
                         : "MAC (AA:BB:CC:DD:EE:FF)"
                     }
-                    className="rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-sm outline-none ring-cyan-400/60 transition focus:ring"
+                    className="rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm outline-none ring-sky-200 transition focus:ring"
                   />
                   <input
                     type="text"
@@ -564,7 +560,7 @@ export default function ManufacturerDashboard({
                       }))
                     }
                     placeholder="Product name"
-                    className="rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-sm outline-none ring-cyan-400/60 transition focus:ring"
+                    className="rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm outline-none ring-sky-200 transition focus:ring"
                   />
                   <input
                     type="text"
@@ -573,7 +569,7 @@ export default function ManufacturerDashboard({
                       setForm((prev) => ({ ...prev, brand: e.target.value }))
                     }
                     placeholder="Brand"
-                    className="rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-sm outline-none ring-cyan-400/60 transition focus:ring"
+                    className="rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm outline-none ring-sky-200 transition focus:ring"
                   />
                   <input
                     type="text"
@@ -582,7 +578,7 @@ export default function ManufacturerDashboard({
                       setForm((prev) => ({ ...prev, model: e.target.value }))
                     }
                     placeholder="Model"
-                    className="rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-sm outline-none ring-cyan-400/60 transition focus:ring"
+                    className="rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm outline-none ring-sky-200 transition focus:ring"
                   />
                   <input
                     type="text"
@@ -594,7 +590,7 @@ export default function ManufacturerDashboard({
                       }))
                     }
                     placeholder="Device type"
-                    className="rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-sm outline-none ring-cyan-400/60 transition focus:ring"
+                    className="rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm outline-none ring-sky-200 transition focus:ring"
                   />
                   <input
                     type="text"
@@ -606,7 +602,7 @@ export default function ManufacturerDashboard({
                       }))
                     }
                     placeholder="Serial number"
-                    className="rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-sm outline-none ring-cyan-400/60 transition focus:ring"
+                    className="rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm outline-none ring-sky-200 transition focus:ring"
                   />
                   <input
                     type="date"
@@ -617,7 +613,7 @@ export default function ManufacturerDashboard({
                         manufactureDate: e.target.value,
                       }))
                     }
-                    className="rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-sm outline-none ring-cyan-400/60 transition focus:ring"
+                    className="rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm outline-none ring-sky-200 transition focus:ring"
                   />
                   <input
                     type="number"
@@ -630,7 +626,7 @@ export default function ManufacturerDashboard({
                       }))
                     }
                     placeholder="Warranty (months)"
-                    className="rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-sm outline-none ring-cyan-400/60 transition focus:ring"
+                    className="rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm outline-none ring-sky-200 transition focus:ring"
                   />
                   <input
                     type="text"
@@ -639,7 +635,7 @@ export default function ManufacturerDashboard({
                       setForm((prev) => ({ ...prev, color: e.target.value }))
                     }
                     placeholder="Color"
-                    className="rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-sm outline-none ring-cyan-400/60 transition focus:ring"
+                    className="rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm outline-none ring-sky-200 transition focus:ring"
                   />
                   <input
                     type="text"
@@ -651,7 +647,7 @@ export default function ManufacturerDashboard({
                       }))
                     }
                     placeholder="Storage / Capacity"
-                    className="rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-sm outline-none ring-cyan-400/60 transition focus:ring"
+                    className="rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm outline-none ring-sky-200 transition focus:ring"
                   />
                 </div>
 
@@ -662,7 +658,7 @@ export default function ManufacturerDashboard({
                 <button
                   onClick={handleRegister}
                   disabled={submitting}
-                  className="mt-5 inline-flex items-center rounded-xl bg-cyan-400 px-5 py-3 text-sm font-semibold text-slate-900 transition hover:bg-cyan-300 disabled:cursor-not-allowed disabled:bg-slate-600 disabled:text-slate-300"
+                  className="mt-5 inline-flex items-center rounded-xl bg-slate-900 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-400 disabled:text-slate-100"
                 >
                   {submitting ? "Registering..." : "Register Product"}
                 </button>
@@ -671,12 +667,13 @@ export default function ManufacturerDashboard({
 
             {activeSection === "verify" && (
               <div className="grid gap-6 xl:grid-cols-[0.95fr_1.05fr]">
-                <div className="rounded-3xl border border-slate-800 bg-slate-900/95 p-6 shadow-xl">
+                <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
                   <h2 className="text-xl font-semibold">
                     Internal Manufacturer Verify
                   </h2>
-                  <p className="mt-2 text-sm text-slate-300">
-                    Search a registered IMEI from inside the manufacturer portal before shipment or supplier handoff.
+                  <p className="mt-2 text-sm text-slate-600">
+                    Search a registered IMEI from inside the manufacturer portal
+                    before shipment or supplier handoff.
                   </p>
 
                   <div className="mt-6 space-y-4">
@@ -685,13 +682,13 @@ export default function ManufacturerDashboard({
                       value={verifyIdentifier}
                       onChange={(e) => setVerifyIdentifier(e.target.value)}
                       placeholder="Enter 15-digit IMEI"
-                      className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-sm outline-none ring-cyan-400/60 transition focus:ring"
+                      className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm outline-none ring-sky-200 transition focus:ring"
                     />
 
                     <button
                       onClick={handleInternalVerify}
                       disabled={verifyLoading}
-                      className="inline-flex items-center rounded-xl bg-amber-300 px-5 py-3 text-sm font-semibold text-slate-950 transition hover:bg-amber-200 disabled:cursor-not-allowed disabled:bg-slate-600 disabled:text-slate-300"
+                      className="inline-flex items-center rounded-xl bg-slate-900 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-400 disabled:text-slate-100"
                     >
                       {verifyLoading ? "Verifying..." : "Verify Product"}
                     </button>
@@ -700,8 +697,8 @@ export default function ManufacturerDashboard({
                       <div
                         className={`rounded-2xl border px-4 py-3 text-sm ${
                           verifyResult.type === "success"
-                            ? "border-emerald-400/30 bg-emerald-400/10 text-emerald-200"
-                            : "border-rose-400/30 bg-rose-400/10 text-rose-200"
+                            ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                            : "border-rose-200 bg-rose-50 text-rose-600"
                         }`}
                       >
                         {verifyResult.message}
@@ -710,69 +707,70 @@ export default function ManufacturerDashboard({
                   </div>
                 </div>
 
-                <div className="rounded-3xl border border-slate-800 bg-slate-900/95 p-6 shadow-xl">
+                <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
                   <div className="flex items-center gap-2">
-                    <SearchCheck className="h-5 w-5 text-emerald-300" />
+                    <SearchCheck className="h-5 w-5 text-sky-700" />
                     <h3 className="text-lg font-semibold">
                       Verification Details
                     </h3>
                   </div>
 
                   {!verifyResult?.product && (
-                    <p className="mt-4 text-sm text-slate-400">
-                      Verified product details will appear here after a successful IMEI check.
+                    <p className="mt-4 text-sm text-slate-600">
+                      Verified product details will appear here after a
+                      successful IMEI check.
                     </p>
                   )}
 
                   {verifyResult?.product && (
                     <div className="mt-5 grid gap-4 md:grid-cols-2">
-                      <div className="rounded-2xl border border-slate-800 bg-slate-950 p-4">
-                        <p className="text-xs uppercase tracking-wider text-slate-500">
+                      <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                        <p className="text-xs uppercase tracking-wider text-slate-600">
                           Product Name
                         </p>
-                        <p className="mt-2 font-semibold text-slate-100">
+                        <p className="mt-2 font-semibold text-slate-900">
                           {verifyResult.product.productName}
                         </p>
                       </div>
-                      <div className="rounded-2xl border border-slate-800 bg-slate-950 p-4">
-                        <p className="text-xs uppercase tracking-wider text-slate-500">
+                      <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                        <p className="text-xs uppercase tracking-wider text-slate-600">
                           Brand
                         </p>
-                        <p className="mt-2 font-semibold text-slate-100">
+                        <p className="mt-2 font-semibold text-slate-900">
                           {verifyResult.product.brand}
                         </p>
                       </div>
-                      <div className="rounded-2xl border border-slate-800 bg-slate-950 p-4">
-                        <p className="text-xs uppercase tracking-wider text-slate-500">
+                      <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                        <p className="text-xs uppercase tracking-wider text-slate-600">
                           Model
                         </p>
-                        <p className="mt-2 font-semibold text-slate-100">
+                        <p className="mt-2 font-semibold text-slate-900">
                           {verifyResult.product.model}
                         </p>
                       </div>
-                      <div className="rounded-2xl border border-slate-800 bg-slate-950 p-4">
-                        <p className="text-xs uppercase tracking-wider text-slate-500">
+                      <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                        <p className="text-xs uppercase tracking-wider text-slate-600">
                           IMEI
                         </p>
-                        <p className="mt-2 font-semibold text-slate-100">
+                        <p className="mt-2 font-semibold text-slate-900">
                           {verifyResult.product.imeiNumber}
                         </p>
                       </div>
-                      <div className="rounded-2xl border border-slate-800 bg-slate-950 p-4 md:col-span-2">
-                        <p className="text-xs uppercase tracking-wider text-slate-500">
+                      <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 md:col-span-2">
+                        <p className="text-xs uppercase tracking-wider text-slate-600">
                           Manufacturer Address
                         </p>
-                        <p className="mt-2 break-all font-mono text-sm text-slate-200">
+                        <p className="mt-2 break-all font-mono text-sm text-slate-800">
                           {verifyResult.product.manufacturer}
                         </p>
                       </div>
-                      <div className="rounded-2xl border border-slate-800 bg-slate-950 p-4 md:col-span-2">
-                        <p className="text-xs uppercase tracking-wider text-slate-500">
+                      <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 md:col-span-2">
+                        <p className="text-xs uppercase tracking-wider text-slate-600">
                           Registration Date
                         </p>
-                        <p className="mt-2 font-semibold text-slate-100">
+                        <p className="mt-2 font-semibold text-slate-900">
                           {new Date(
-                            verifyResult.product.registrationDate
+                            verifyResult.product.registrationDate,
                           ).toLocaleString()}
                         </p>
                       </div>
