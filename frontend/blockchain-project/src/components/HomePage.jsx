@@ -2,7 +2,6 @@ import React from "react";
 import {
   ShieldCheck,
   Factory,
-  Truck,
   SearchCheck,
   Wifi,
   Smartphone,
@@ -20,7 +19,7 @@ import {
 } from "lucide-react";
 
 const stats = [
-  { label: "Target Ecosystem", value: "Manufacturer + Supplier + Consumer" },
+  { label: "Target Ecosystem", value: "Manufacturer + Admin + Consumer" },
   { label: "Verification Mode", value: "Public IMEI / MAC Lookup" },
   { label: "Record Nature", value: "Immutable Blockchain Ledger" },
   {
@@ -33,14 +32,14 @@ const processSteps = [
   {
     title: "Manufacturer Registration",
     detail:
-      "Manufacturer creates an on-chain electronic device record with unique IMEI and product metadata.",
+      "Manufacturer creates an on-chain electronic device record using a trusted product identifier and product metadata.",
     icon: Factory,
   },
   {
-    title: "Supplier Validation",
+    title: "Admin Approval",
     detail:
-      "Supplier validates incoming inventory against blockchain records before onward distribution.",
-    icon: Truck,
+      "Admin reviews manufacturer access and authorizes only trusted organizations to issue product records.",
+    icon: ShieldCheck,
   },
   {
     title: "Public Verification",
@@ -70,9 +69,9 @@ const securityPillars = [
     icon: Database,
   },
   {
-    title: "Multi-Stakeholder Flow",
+    title: "Controlled Access",
     detail:
-      "Manufacturer and supplier checkpoints strengthen trust across the supply chain.",
+      "Manufacturer, admin, and public verification flows stay separated with role-specific access.",
     icon: Globe,
   },
   {
@@ -85,7 +84,6 @@ const securityPillars = [
 
 export default function HomePage({
   onManufacturerLogin,
-  onSupplierPortal,
   checkIdentifier,
   verificationInput,
   setVerificationInput,
@@ -95,6 +93,15 @@ export default function HomePage({
   verificationResult,
   systemStatus,
 }) {
+  const normalizeVerificationInput = (rawValue) => {
+    if (verificationType === "imei") {
+      return rawValue.replace(/\D/g, "").slice(0, 15);
+    }
+
+    const hexOnly = rawValue.toUpperCase().replace(/[^0-9A-F]/g, "").slice(0, 12);
+    return hexOnly.match(/.{1,2}/g)?.join(":") || "";
+  };
+
   const goToVerification = () => {
     const section = document.getElementById("verification-lab");
     if (section) {
@@ -252,7 +259,7 @@ export default function HomePage({
             </div>
           </div>
 
-          <div className="grid gap-5 md:grid-cols-3">
+          <div className="grid gap-5 md:grid-cols-2">
             <button
               onClick={onManufacturerLogin}
               className="group rounded-2xl border border-slate-200 bg-white p-6 text-left transition hover:border-slate-300 hover:bg-slate-50"
@@ -262,27 +269,11 @@ export default function HomePage({
                 Manufacturer Portal
               </h3>
               <p className="mt-2 text-sm text-slate-600">
-                Register electronic device identity, attach IMEI, and initialize
+                Register electronic device identity, attach a trusted identifier, and initialize
                 trusted blockchain records.
               </p>
               <p className="mt-4 text-sm font-medium text-sky-700 group-hover:text-sky-800">
                 Open login <ArrowRight className="ml-1 inline h-4 w-4" />
-              </p>
-            </button>
-
-            <button
-              onClick={onSupplierPortal}
-              className="group rounded-2xl border border-slate-200 bg-white p-6 text-left transition hover:border-slate-300 hover:bg-slate-50"
-            >
-              <Truck className="h-7 w-7 text-slate-700" />
-              <h3 className="mt-4 text-lg font-semibold">Supplier Portal</h3>
-              <p className="mt-2 text-sm text-slate-600">
-                Validate supply-chain inventory against manufacturer records
-                before forwarding to market.
-              </p>
-              <p className="mt-4 text-sm font-medium text-slate-700 group-hover:text-slate-900">
-                Open supplier tools{" "}
-                <ArrowRight className="ml-1 inline h-4 w-4" />
               </p>
             </button>
 
@@ -377,7 +368,9 @@ export default function HomePage({
               <input
                 type="text"
                 value={verificationInput}
-                onChange={(e) => setVerificationInput(e.target.value)}
+                onChange={(e) => setVerificationInput(normalizeVerificationInput(e.target.value))}
+                inputMode={verificationType === "imei" ? "numeric" : "text"}
+                maxLength={verificationType === "imei" ? 15 : 17}
                 placeholder={
                   verificationType === "imei"
                     ? "Enter 15-digit IMEI"
@@ -429,8 +422,12 @@ export default function HomePage({
                       {verificationResult.data.model}
                     </p>
                     <p>
-                      <span className="text-slate-600">IMEI:</span>{" "}
-                      {verificationResult.data.imeiNumber}
+                      <span className="text-slate-600">Identifier Type:</span>{" "}
+                      {verificationResult.data.identifierType?.toUpperCase()}
+                    </p>
+                    <p>
+                      <span className="text-slate-600">Identifier Value:</span>{" "}
+                      {verificationResult.data.identifierValue}
                     </p>
                     <p>
                       <span className="text-slate-600">Manufacturer:</span>{" "}

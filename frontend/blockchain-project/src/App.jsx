@@ -4,13 +4,31 @@ import ManufacturerLogin from "./components/ManufacturerLogin";
 import ManufacturerOtp from "./components/ManufacturerOtp";
 import ManufacturerSignup from "./components/ManufacturerSignup";
 import ManufacturerDashboard from "./components/ManufacturerDashboard";
+import AdminLogin from "./components/AdminLogin";
+import AdminDashboard from "./components/AdminDashboard";
 
 const API_BASE_URL = `http://${window.location.hostname}:3000/api`;
 const REQUEST_HEADERS = { "Content-Type": "application/json" };
 const MANUFACTURER_TOKEN_KEY = "manufacturer_auth_token";
+const ADMIN_TOKEN_KEY = "admin_auth_token";
+
+function getHashRoute() {
+  return window.location.hash || "#/";
+}
+
+function setHashRoute(route) {
+  if (window.location.hash !== route) {
+    window.location.hash = route;
+  }
+}
+
+function getInitialViewFromHash() {
+  const hash = getHashRoute();
+  return hash.startsWith("#/admin") ? "admin-login" : "home";
+}
 
 export default function App() {
-  const [view, setView] = useState("home");
+  const [view, setView] = useState(() => getInitialViewFromHash());
   const [systemStatus, setSystemStatus] = useState(null);
 
   const [verificationType, setVerificationType] = useState("imei");
@@ -29,21 +47,45 @@ export default function App() {
     password: "",
     confirmPassword: "",
   });
+  const [adminForm, setAdminForm] = useState({
+    email: "",
+    password: "",
+  });
 
   const [loadingAuth, setLoadingAuth] = useState(false);
   const [loginError, setLoginError] = useState("");
   const [signupError, setSignupError] = useState("");
   const [otpError, setOtpError] = useState("");
+  const [adminError, setAdminError] = useState("");
   const [otpCode, setOtpCode] = useState("");
   const [otpFlow, setOtpFlow] = useState(null);
   const [activeManufacturer, setActiveManufacturer] = useState(null);
+  const [activeAdmin, setActiveAdmin] = useState(null);
   const [authToken, setAuthToken] = useState(
     () => window.localStorage.getItem(MANUFACTURER_TOKEN_KEY) || ""
+  );
+  const [adminToken, setAdminToken] = useState(
+    () => window.localStorage.getItem(ADMIN_TOKEN_KEY) || ""
   );
 
   useEffect(() => {
     checkHealth();
   }, []);
+
+  useEffect(() => {
+    const handleHashChange = () => {
+      const hash = getHashRoute();
+      if (hash.startsWith("#/admin")) {
+        setView(adminToken ? "admin-dashboard" : "admin-login");
+      } else if (view === "admin-login" || view === "admin-dashboard") {
+        setView(authToken ? "manufacturer-dashboard" : "home");
+      }
+    };
+
+    window.addEventListener("hashchange", handleHashChange);
+    handleHashChange();
+    return () => window.removeEventListener("hashchange", handleHashChange);
+  }, [adminToken, authToken, view]);
 
   useEffect(() => {
     if (!authToken) {
@@ -52,7 +94,7 @@ export default function App() {
 
     let cancelled = false;
 
-    const restoreSession = async () => {
+    const restoreManufacturerSession = async () => {
       try {
         const response = await fetch(`${API_BASE_URL}/manufacturers/me`, {
           headers: {
@@ -68,7 +110,9 @@ export default function App() {
 
         if (!cancelled) {
           setActiveManufacturer(data.manufacturer);
-          setView("manufacturer-dashboard");
+          if (!getHashRoute().startsWith("#/admin")) {
+            setView("manufacturer-dashboard");
+          }
         }
       } catch (error) {
         if (!cancelled) {
@@ -79,15 +123,65 @@ export default function App() {
       }
     };
 
-    restoreSession();
+    restoreManufacturerSession();
 
     return () => {
       cancelled = true;
     };
   }, [authToken]);
 
+  useEffect(() => {
+    if (!adminToken) {
+      return;
+    }
+
+    let cancelled = false;
+
+    const restoreAdminSession = async () => {
+      try {
+        const response = await fetch(`${API_BASE_URL}/admin/me`, {
+          headers: {
+            Authorization: `Bearer ${adminToken}`,
+          },
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.error || "Admin session restore failed.");
+        }
+
+        if (!cancelled) {
+          setActiveAdmin(data.admin);
+          if (getHashRoute().startsWith("#/admin")) {
+            setView("admin-dashboard");
+          }
+        }
+      } catch (error) {
+        if (!cancelled) {
+          window.localStorage.removeItem(ADMIN_TOKEN_KEY);
+          setAdminToken("");
+          setActiveAdmin(null);
+          if (getHashRoute().startsWith("#/admin")) {
+            setView("admin-login");
+          }
+        }
+      }
+    };
+
+    restoreAdminSession();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [adminToken]);
+
   const normalizedImei = useMemo(
     () => verificationInput.replace(/\D/g, "").slice(0, 15),
+    [verificationInput]
+  );
+  const normalizedMac = useMemo(
+    () => verificationInput.trim().replace(/-/g, ":").toUpperCase(),
     [verificationInput]
   );
 
@@ -105,6 +199,7 @@ export default function App() {
   const handleVerifyIdentifier = async () => {
     setVerificationResult(null);
 
+    let identifierValue = "";
     if (verificationType === "imei") {
       if (normalizedImei.length !== 15) {
         setVerificationResult({
@@ -113,51 +208,46 @@ export default function App() {
         });
         return;
       }
-
-      setVerifying(true);
-      try {
-        const response = await fetch(
-          `${API_BASE_URL}/verify-product/${normalizedImei}`
-        );
-        const data = await response.json();
-
-        if (response.ok && data.isValid) {
-          setVerificationResult({
-            type: "success",
-            message: data.message || "Product is authentic.",
-            data: data.product,
-          });
-        } else {
-          setVerificationResult({
-            type: "error",
-            message: data.message || data.error || "Product not found on-chain.",
-          });
-        }
-      } catch (error) {
+      identifierValue = normalizedImei;
+    } else {
+      const macRegex = /^([0-9A-F]{2}:){5}[0-9A-F]{2}$/;
+      if (!macRegex.test(normalizedMac)) {
         setVerificationResult({
           type: "error",
-          message: "Unable to verify right now. Make sure backend is running.",
+          message: "Enter a valid MAC address, e.g. AA:BB:CC:DD:EE:FF",
         });
-      } finally {
-        setVerifying(false);
+        return;
       }
-      return;
+      identifierValue = normalizedMac;
     }
 
-    const macRegex = /^([0-9A-Fa-f]{2}[:\-]){5}[0-9A-Fa-f]{2}$/;
-    if (!macRegex.test(verificationInput.trim())) {
+    setVerifying(true);
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/verify-product/${verificationType}/${encodeURIComponent(identifierValue)}`
+      );
+      const data = await response.json();
+
+      if (response.ok && data.isValid) {
+        setVerificationResult({
+          type: "success",
+          message: data.message || "Product is authentic.",
+          data: data.product,
+        });
+      } else {
+        setVerificationResult({
+          type: "error",
+          message: data.message || data.error || "Product not found on-chain.",
+        });
+      }
+    } catch (error) {
       setVerificationResult({
         type: "error",
-        message: "Enter a valid MAC address, e.g. AA:BB:CC:DD:EE:FF",
+        message: "Unable to verify right now. Make sure backend is running.",
       });
-      return;
+    } finally {
+      setVerifying(false);
     }
-
-    setVerificationResult({
-      type: "error",
-      message:
-        "MAC verification UI is ready, but backend/blockchain endpoint is not implemented yet.",
-    });
   };
 
   const handleSignup = async () => {
@@ -398,6 +488,87 @@ export default function App() {
     }
   };
 
+  const handleAdminLogin = async () => {
+    setAdminError("");
+
+    if (!adminForm.email.trim() || !adminForm.password.trim()) {
+      setAdminError("Email and password are required.");
+      return;
+    }
+
+    setLoadingAuth(true);
+    try {
+      const response = await fetch(`${API_BASE_URL}/admin/login`, {
+        method: "POST",
+        headers: REQUEST_HEADERS,
+        body: JSON.stringify({
+          email: adminForm.email.trim(),
+          password: adminForm.password,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        setAdminError(data.error || "Admin login failed.");
+        return;
+      }
+
+      window.localStorage.setItem(ADMIN_TOKEN_KEY, data.token);
+      setAdminToken(data.token);
+      setActiveAdmin(data.admin);
+      setHashRoute("#/admin/dashboard");
+      setView("admin-dashboard");
+    } catch (error) {
+      setAdminError("Unable to login as admin. Make sure the backend is running.");
+    } finally {
+      setLoadingAuth(false);
+    }
+  };
+
+  const logoutManufacturer = () => {
+    window.localStorage.removeItem(MANUFACTURER_TOKEN_KEY);
+    setAuthToken("");
+    setActiveManufacturer(null);
+    setOtpFlow(null);
+    setOtpCode("");
+    setView("home");
+    if (!getHashRoute().startsWith("#/admin")) {
+      setHashRoute("#/");
+    }
+  };
+
+  const logoutAdmin = () => {
+    window.localStorage.removeItem(ADMIN_TOKEN_KEY);
+    setAdminToken("");
+    setActiveAdmin(null);
+    setAdminError("");
+    setHashRoute("#/admin/login");
+    setView("admin-login");
+  };
+
+  if (view === "admin-login") {
+    return (
+      <AdminLogin
+        form={adminForm}
+        setForm={setAdminForm}
+        onSubmit={handleAdminLogin}
+        loading={loadingAuth}
+        error={adminError}
+      />
+    );
+  }
+
+  if (view === "admin-dashboard") {
+    return (
+      <AdminDashboard
+        adminEmail={activeAdmin?.email || adminForm.email}
+        adminToken={adminToken}
+        onLogout={logoutAdmin}
+      />
+    );
+  }
+
   if (view === "manufacturer-login") {
     return (
       <ManufacturerLogin
@@ -466,14 +637,7 @@ export default function App() {
       <ManufacturerDashboard
         manufacturer={activeManufacturer}
         authToken={authToken}
-        onLogout={() => {
-          window.localStorage.removeItem(MANUFACTURER_TOKEN_KEY);
-          setAuthToken("");
-          setActiveManufacturer(null);
-          setOtpFlow(null);
-          setOtpCode("");
-          setView("home");
-        }}
+        onLogout={logoutManufacturer}
       />
     );
   }
@@ -481,12 +645,6 @@ export default function App() {
   return (
     <HomePage
       onManufacturerLogin={() => setView("manufacturer-login")}
-      onSupplierPortal={() =>
-        setVerificationResult({
-          type: "error",
-          message: "Supplier portal UI will be the next screen to implement.",
-        })
-      }
       checkIdentifier={handleVerifyIdentifier}
       verificationInput={verificationType === "imei" ? normalizedImei : verificationInput}
       setVerificationInput={setVerificationInput}

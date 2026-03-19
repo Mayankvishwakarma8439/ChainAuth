@@ -35,6 +35,11 @@ const RESEND_API_KEY = process.env.RESEND_API_KEY || "";
 const RESEND_FROM_EMAIL =
   process.env.RESEND_FROM_EMAIL || "onboarding@resend.dev";
 const OTP_DEV_BYPASS = process.env.OTP_DEV_BYPASS === "true";
+const ADMIN_API_KEY = process.env.ADMIN_API_KEY || "";
+const ADMIN_EMAIL =
+  process.env.ADMIN_EMAIL || "admin@chainauth.local";
+const ADMIN_PASSWORD =
+  process.env.ADMIN_PASSWORD || "ChainAuthAdmin@2026";
 const web3 = new Web3(process.env.WEB3_PROVIDER || "http://127.0.0.1:8545");
 
 const contractPath = path.join(
@@ -171,14 +176,91 @@ function resetLoginAttemptState(manufacturer) {
   manufacturer.loginLockedUntil = null;
 }
 
+function normalizeIdentifierType(identifierType) {
+  const normalizedType = String(identifierType || "").trim().toLowerCase();
+  if (!["imei", "mac"].includes(normalizedType)) {
+    throw new Error("Unsupported identifier type");
+  }
+  return normalizedType;
+}
+
+function normalizeIdentifierValue(identifierType, identifierValue) {
+  const rawValue = String(identifierValue || "").trim();
+
+  if (identifierType === "imei") {
+    const digitsOnly = rawValue.replace(/\D/g, "").slice(0, 15);
+    if (digitsOnly.length !== 15) {
+      throw new Error("IMEI must be exactly 15 digits");
+    }
+    return digitsOnly;
+  }
+
+  const normalizedMac = rawValue.replace(/-/g, ":").toUpperCase();
+  if (!/^([0-9A-F]{2}:){5}[0-9A-F]{2}$/.test(normalizedMac)) {
+    throw new Error("Enter a valid MAC address, e.g. AA:BB:CC:DD:EE:FF");
+  }
+  return normalizedMac;
+}
+
+function buildIdentifierErrorMessage(identifierType, action) {
+  return identifierType === "mac"
+    ? `Product with this MAC address already ${action}`
+    : `Product with this IMEI already ${action}`;
+}
+
+function mapContractProduct(product) {
+  return {
+    productName: product.productName,
+    brand: product.brand,
+    model: product.model,
+    identifierType: product.identifierType,
+    identifierValue: product.identifierValue,
+    imeiNumber: product.imeiNumber,
+    macAddress: product.macAddress,
+    manufacturer: product.manufacturer,
+    registrationDate: new Date(
+      Number(product.registrationDate) * 1000
+    ).toISOString(),
+    isRegistered: product.isRegistered,
+  };
+}
+
+async function fetchRegisteredProduct(identifierType, identifierValue) {
+  const exists = await contract.methods
+    .isProductRegistered(identifierType, identifierValue)
+    .call();
+
+  if (!exists) {
+    return null;
+  }
+
+  const product = await contract.methods
+    .getProduct(identifierType, identifierValue)
+    .call();
+
+  return mapContractProduct(product);
+}
+
 function createToken(manufacturer) {
   return jwt.sign(
     {
       manufacturerId: manufacturer._id.toString(),
       officialEmail: manufacturer.officialEmail,
+      role: "manufacturer",
     },
     JWT_SECRET,
     { expiresIn: "7d" }
+  );
+}
+
+function createAdminToken() {
+  return jwt.sign(
+    {
+      role: "admin",
+      email: ADMIN_EMAIL,
+    },
+    JWT_SECRET,
+    { expiresIn: "12h" }
   );
 }
 
@@ -240,6 +322,36 @@ async function requireManufacturerAuth(req, res, next) {
   }
 }
 
+
+async function requireAdminAccess(req, res, next) {
+  const authorization = req.headers.authorization || "";
+  const token = authorization.startsWith("Bearer ")
+    ? authorization.slice(7)
+    : null;
+
+  if (token) {
+    try {
+      const payload = jwt.verify(token, JWT_SECRET);
+      if (payload?.role === "admin" && payload?.email === ADMIN_EMAIL) {
+        req.admin = { email: ADMIN_EMAIL };
+        return next();
+      }
+    } catch (error) {
+      return res.status(401).json({ error: "Invalid or expired admin token" });
+    }
+
+    return res.status(403).json({ error: "Admin access is required" });
+  }
+
+  const providedKey = req.headers["x-admin-key"] || "";
+  if (ADMIN_API_KEY && providedKey === ADMIN_API_KEY) {
+    req.admin = { email: ADMIN_EMAIL, via: "api-key" };
+    return next();
+  }
+
+  return res.status(401).json({ error: "Admin authentication is required" });
+}
+
 app.post(
   "/api/register-product",
   requireManufacturerAuth,
@@ -249,26 +361,66 @@ app.post(
         return res.status(500).json({ error: "Contract not initialized" });
       }
 
-      const { imeiNumber, productName, brand, model } = req.body;
+      if (req.manufacturer.status !== "approved") {
+        return res.status(403).json({
+          error:
+            req.manufacturer.status === "rejected"
+              ? "Your manufacturer account has been rejected and cannot register products."
+              : "Your manufacturer account is pending approval. Product registration is available only for approved manufacturers.",
+        });
+      }
 
-      if (!imeiNumber || !productName || !brand || !model) {
+      const {
+        identifierType,
+        identifierValue,
+        imeiNumber,
+        macAddress,
+        productName,
+        brand,
+        model,
+      } = req.body || {};
+
+      if (!productName || !brand || !model) {
         return res.status(400).json({ error: "All fields are required" });
       }
 
+      let normalizedIdentifierType;
+      let normalizedIdentifierValue;
+      try {
+        normalizedIdentifierType = normalizeIdentifierType(
+          identifierType || (macAddress ? "mac" : "imei")
+        );
+        normalizedIdentifierValue = normalizeIdentifierValue(
+          normalizedIdentifierType,
+          identifierValue || imeiNumber || macAddress
+        );
+      } catch (validationError) {
+        return res.status(400).json({ error: validationError.message });
+      }
+
       const exists = await contract.methods
-        .isProductRegistered(imeiNumber)
+        .isProductRegistered(normalizedIdentifierType, normalizedIdentifierValue)
         .call();
       if (exists) {
-        return res
-          .status(400)
-          .json({ error: "Product with this IMEI already registered" });
+        return res.status(400).json({
+          error: buildIdentifierErrorMessage(
+            normalizedIdentifierType,
+            "registered"
+          ),
+        });
       }
 
       const result = await contract.methods
-        .registerProduct(imeiNumber, productName, brand, model)
+        .registerProduct(
+          normalizedIdentifierType,
+          normalizedIdentifierValue,
+          String(productName).trim(),
+          String(brand).trim(),
+          String(model).trim()
+        )
         .send({
           from: accounts[0],
-          gas: 500000,
+          gas: 700000,
         });
 
       res.json({
@@ -279,10 +431,15 @@ app.post(
         gasUsed: Number(result.gasUsed),
         manufacturer: sanitizeManufacturer(req.manufacturer),
         data: {
-          imeiNumber,
-          productName,
-          brand,
-          model,
+          identifierType: normalizedIdentifierType,
+          identifierValue: normalizedIdentifierValue,
+          imeiNumber:
+            normalizedIdentifierType === "imei" ? normalizedIdentifierValue : "",
+          macAddress:
+            normalizedIdentifierType === "mac" ? normalizedIdentifierValue : "",
+          productName: String(productName).trim(),
+          brand: String(brand).trim(),
+          model: String(model).trim(),
         },
       });
     } catch (error) {
@@ -295,45 +452,76 @@ app.post(
   }
 );
 
-app.get("/api/verify-product/:imeiNumber", async (req, res) => {
+app.get("/api/verify-product/:identifierType/:identifierValue", async (req, res) => {
   try {
     if (!contract) {
       return res.status(500).json({ error: "Contract not initialized" });
     }
 
-    const { imeiNumber } = req.params;
-
-    if (!imeiNumber) {
-      return res.status(400).json({ error: "IMEI number is required" });
+    let normalizedIdentifierType;
+    let normalizedIdentifierValue;
+    try {
+      normalizedIdentifierType = normalizeIdentifierType(req.params.identifierType);
+      normalizedIdentifierValue = normalizeIdentifierValue(
+        normalizedIdentifierType,
+        req.params.identifierValue
+      );
+    } catch (validationError) {
+      return res.status(400).json({ error: validationError.message });
     }
 
-    const exists = await contract.methods
-      .isProductRegistered(imeiNumber)
-      .call();
+    const product = await fetchRegisteredProduct(
+      normalizedIdentifierType,
+      normalizedIdentifierValue
+    );
 
-    if (!exists) {
+    if (!product) {
       return res.json({
         isValid: false,
         message: "Product not found in registry",
       });
     }
 
-    const product = await contract.methods.getProduct(imeiNumber).call();
+    res.json({
+      isValid: true,
+      message: "Product verified successfully",
+      product,
+    });
+  } catch (error) {
+    console.error("Error verifying product:", error);
+    res.status(500).json({
+      error: "Failed to verify product",
+      details: error.message,
+    });
+  }
+});
+
+app.get("/api/verify-product/:imeiNumber", async (req, res) => {
+  try {
+    if (!contract) {
+      return res.status(500).json({ error: "Contract not initialized" });
+    }
+
+    let normalizedImei;
+    try {
+      normalizedImei = normalizeIdentifierValue("imei", req.params.imeiNumber);
+    } catch (validationError) {
+      return res.status(400).json({ error: validationError.message });
+    }
+
+    const product = await fetchRegisteredProduct("imei", normalizedImei);
+
+    if (!product) {
+      return res.json({
+        isValid: false,
+        message: "Product not found in registry",
+      });
+    }
 
     res.json({
       isValid: true,
       message: "Product verified successfully",
-      product: {
-        productName: product.productName,
-        brand: product.brand,
-        model: product.model,
-        imeiNumber: product.imeiNumber,
-        manufacturer: product.manufacturer,
-        registrationDate: new Date(
-          Number(product.registrationDate) * 1000
-        ).toISOString(),
-        isRegistered: product.isRegistered,
-      },
+      product,
     });
   } catch (error) {
     console.error("Error verifying product:", error);
@@ -722,6 +910,107 @@ app.post("/api/manufacturers/resend-otp", async (req, res) => {
   }
 });
 
+app.post("/api/admin/login", async (req, res) => {
+  try {
+    const { email, password } = req.body || {};
+
+    if (!email || !password) {
+      return res.status(400).json({ error: "Email and password are required" });
+    }
+
+    const normalizedEmail = String(email).trim().toLowerCase();
+    if (
+      normalizedEmail !== ADMIN_EMAIL.toLowerCase() ||
+      String(password) !== ADMIN_PASSWORD
+    ) {
+      return res.status(401).json({ error: "Invalid admin credentials" });
+    }
+
+    return res.json({
+      success: true,
+      message: "Admin login successful.",
+      token: createAdminToken(),
+      admin: { email: ADMIN_EMAIL },
+    });
+  } catch (error) {
+    console.error("Admin login failed:", error);
+    return res.status(500).json({
+      error: "Failed to login as admin",
+      details: error.message,
+    });
+  }
+});
+
+app.get("/api/admin/me", requireAdminAccess, async (req, res) => {
+  return res.json({
+    success: true,
+    admin: { email: req.admin?.email || ADMIN_EMAIL },
+  });
+});
+
+app.get("/api/admin/manufacturers", requireAdminAccess, async (req, res) => {
+  try {
+    const status = typeof req.query.status === "string" ? req.query.status.trim().toLowerCase() : "";
+    const filter = status && ["pending", "approved", "rejected"].includes(status)
+      ? { status }
+      : {};
+
+    const manufacturers = await Manufacturer.find(filter)
+      .sort({ createdAt: -1 })
+      .lean();
+
+    return res.json({
+      success: true,
+      count: manufacturers.length,
+      manufacturers: manufacturers.map(sanitizeManufacturer),
+    });
+  } catch (error) {
+    console.error("Failed to list manufacturers:", error);
+    return res.status(500).json({
+      error: "Failed to fetch manufacturers",
+      details: error.message,
+    });
+  }
+});
+
+app.patch(
+  "/api/admin/manufacturers/:manufacturerId/status",
+  requireAdminAccess,
+  async (req, res) => {
+    try {
+      const { manufacturerId } = req.params;
+      const nextStatus = String(req.body?.status || "").trim().toLowerCase();
+
+      if (!["approved", "rejected", "pending"].includes(nextStatus)) {
+        return res.status(400).json({
+          error: "Status must be one of: pending, approved, rejected",
+        });
+      }
+
+      const manufacturer = await Manufacturer.findById(manufacturerId);
+
+      if (!manufacturer) {
+        return res.status(404).json({ error: "Manufacturer account not found" });
+      }
+
+      manufacturer.status = nextStatus;
+      await manufacturer.save();
+
+      return res.json({
+        success: true,
+        message: `Manufacturer status updated to ${nextStatus}.`,
+        manufacturer: sanitizeManufacturer(manufacturer),
+      });
+    } catch (error) {
+      console.error("Failed to update manufacturer status:", error);
+      return res.status(500).json({
+        error: "Failed to update manufacturer status",
+        details: error.message,
+      });
+    }
+  }
+);
+
 app.get("/api/manufacturers/me", requireManufacturerAuth, async (req, res) => {
   return res.json({
     success: true,
@@ -761,6 +1050,10 @@ async function startServer() {
       );
       console.log(`- POST http://localhost:${PORT}/api/manufacturers/resend-otp`);
       console.log(`- GET  http://localhost:${PORT}/api/manufacturers/me`);
+      console.log(`- POST http://localhost:${PORT}/api/admin/login`);
+      console.log(`- GET  http://localhost:${PORT}/api/admin/me`);
+      console.log(`- GET  http://localhost:${PORT}/api/admin/manufacturers`);
+      console.log(`- PATCH http://localhost:${PORT}/api/admin/manufacturers/:manufacturerId/status`);
       console.log(`- GET  http://localhost:${PORT}/api/accounts`);
       console.log(`- GET  http://localhost:${PORT}/api/health`);
     });

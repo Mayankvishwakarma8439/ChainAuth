@@ -25,7 +25,7 @@ const workspaceSections = [
     id: "register",
     title: "Register Product",
     icon: Factory,
-    description: "Create a new on-chain IMEI record.",
+    description: "Create a new product record for the registry.",
   },
   {
     id: "verify",
@@ -63,6 +63,15 @@ export default function ManufacturerDashboard({
   authToken,
   onLogout,
 }) {
+  const normalizeIdentifierInput = (identifierType, rawValue) => {
+    if (identifierType === "imei") {
+      return rawValue.replace(/\D/g, "").slice(0, 15);
+    }
+
+    const hexOnly = rawValue.toUpperCase().replace(/[^0-9A-F]/g, "").slice(0, 12);
+    return hexOnly.match(/.{1,2}/g)?.join(":") || "";
+  };
+
   const [activeSection, setActiveSection] = useState("overview");
   const [form, setForm] = useState({
     identifierType: "imei",
@@ -77,6 +86,7 @@ export default function ManufacturerDashboard({
     color: "",
     storageCapacity: "",
   });
+  const [verifyIdentifierType, setVerifyIdentifierType] = useState("imei");
   const [verifyIdentifier, setVerifyIdentifier] = useState("");
   const [verifyLoading, setVerifyLoading] = useState(false);
   const [verifyResult, setVerifyResult] = useState(null);
@@ -84,11 +94,20 @@ export default function ManufacturerDashboard({
   const [registerResult, setRegisterResult] = useState(null);
   const [latestRegistration, setLatestRegistration] = useState(null);
 
+  const approvalStatus = manufacturer?.status || "pending";
+  const isApproved = approvalStatus === "approved";
+  const statusTone =
+    approvalStatus === "approved"
+      ? "text-emerald-700"
+      : approvalStatus === "rejected"
+        ? "text-rose-600"
+        : "text-amber-700";
+
   const manufacturerStats = [
     {
       label: "Account Status",
-      value: manufacturer?.status || "pending",
-      tone: "text-emerald-700",
+      value: approvalStatus,
+      tone: statusTone,
     },
     {
       label: "Wallet Address",
@@ -106,6 +125,17 @@ export default function ManufacturerDashboard({
 
   const handleRegister = async () => {
     setRegisterResult(null);
+
+    if (!isApproved) {
+      setRegisterResult({
+        type: "error",
+        message:
+          approvalStatus === "rejected"
+            ? "This manufacturer account has been rejected and cannot register products."
+            : "Your manufacturer account is pending approval. Product registration is available only after approval.",
+      });
+      return;
+    }
 
     if (form.identifierType === "imei") {
       const imei = form.identifier.replace(/\D/g, "").slice(0, 15);
@@ -135,20 +165,15 @@ export default function ManufacturerDashboard({
       return;
     }
 
-    if (form.identifierType === "mac") {
-      setRegisterResult({
-        type: "error",
-        message:
-          "MAC registration is not implemented on the backend yet. Use IMEI for on-chain registration.",
-      });
-      return;
-    }
-
     setSubmitting(true);
     try {
-      const imei = form.identifier.replace(/\D/g, "").slice(0, 15);
+      const normalizedIdentifier =
+        form.identifierType === "imei"
+          ? form.identifier.replace(/\D/g, "").slice(0, 15)
+          : form.identifier.trim().replace(/-/g, ":").toUpperCase();
       const payload = {
-        imeiNumber: imei,
+        identifierType: form.identifierType,
+        identifierValue: normalizedIdentifier,
         productName: form.productName.trim(),
         brand: form.brand.trim(),
         model: form.model.trim(),
@@ -187,7 +212,8 @@ export default function ManufacturerDashboard({
         tx: data.transactionHash,
       });
       setLatestRegistration({
-        imeiNumber: payload.imeiNumber,
+        identifierType: payload.identifierType,
+        identifierValue: payload.identifierValue,
         productName: payload.productName,
         brand: payload.brand,
         model: payload.model,
@@ -219,18 +245,32 @@ export default function ManufacturerDashboard({
   const handleInternalVerify = async () => {
     setVerifyResult(null);
 
-    const imei = verifyIdentifier.replace(/\D/g, "").slice(0, 15);
-    if (imei.length !== 15) {
-      setVerifyResult({
-        type: "error",
-        message: "Enter a valid 15-digit IMEI for verification.",
-      });
-      return;
+    let normalizedIdentifier = "";
+    if (verifyIdentifierType === "imei") {
+      normalizedIdentifier = verifyIdentifier.replace(/\D/g, "").slice(0, 15);
+      if (normalizedIdentifier.length !== 15) {
+        setVerifyResult({
+          type: "error",
+          message: "Enter a valid 15-digit IMEI for verification.",
+        });
+        return;
+      }
+    } else {
+      normalizedIdentifier = verifyIdentifier.trim().replace(/-/g, ":").toUpperCase();
+      if (!/^([0-9A-F]{2}:){5}[0-9A-F]{2}$/.test(normalizedIdentifier)) {
+        setVerifyResult({
+          type: "error",
+          message: "Enter a valid MAC address, e.g. AA:BB:CC:DD:EE:FF",
+        });
+        return;
+      }
     }
 
     setVerifyLoading(true);
     try {
-      const response = await fetch(`${API_BASE_URL}/verify-product/${imei}`);
+      const response = await fetch(
+        `${API_BASE_URL}/verify-product/${verifyIdentifierType}/${encodeURIComponent(normalizedIdentifier)}`
+      );
       const data = await response.json();
 
       if (!response.ok || !data.isValid) {
@@ -280,7 +320,7 @@ export default function ManufacturerDashboard({
                   Manufacturer Dashboard
                 </h1>
                 <p className="mt-2 max-w-2xl text-sm text-slate-600">
-                  Manage private manufacturer operations here...
+                  Manage private manufacturer operations, review account status, and issue trusted product records from one dedicated workspace.
                 </p>
               </div>
             </div>
@@ -388,7 +428,7 @@ export default function ManufacturerDashboard({
                         Register New Product
                       </p>
                       <p className="mt-2 text-sm text-slate-600">
-                        Create a new on-chain IMEI record for an electronic
+                        Create a new blockchain-backed product record for an electronic
                         device batch.
                       </p>
                       <p className="mt-4 inline-flex items-center text-sm text-sky-700">
@@ -405,8 +445,8 @@ export default function ManufacturerDashboard({
                         Internal Product Verify
                       </p>
                       <p className="mt-2 text-sm text-slate-600">
-                        Confirm whether an IMEI already exists in the blockchain
-                        registry before shipment.
+                        Confirm whether an identifier already exists in the blockchain
+                        registry before release.
                       </p>
                       <p className="mt-4 inline-flex items-center text-sm text-slate-700">
                         Open verification{" "}
@@ -439,7 +479,9 @@ export default function ManufacturerDashboard({
                       </p>
                       <p>
                         <span className="text-slate-600">Status:</span>{" "}
-                        {manufacturer?.status}
+                        <span className={`font-semibold ${statusTone}`}>
+                          {approvalStatus}
+                        </span>
                       </p>
                     </div>
                   </div>
@@ -466,8 +508,8 @@ export default function ManufacturerDashboard({
                           {latestRegistration.model}
                         </p>
                         <p>
-                          <span className="text-slate-600">IMEI:</span>{" "}
-                          {latestRegistration.imeiNumber}
+                          <span className="text-slate-600">Identifier:</span>{" "}
+                          {latestRegistration.identifierType?.toUpperCase()} - {latestRegistration.identifierValue}
                         </p>
                       </div>
                     ) : (
@@ -485,9 +527,17 @@ export default function ManufacturerDashboard({
                 <h2 className="text-xl font-semibold">Register New Product</h2>
                 <p className="mt-2 text-sm text-slate-600">
                   This form is part of the manufacturer-only workspace.
-                  Registered IMEI records are written to blockchain and remain
+                  Registered product identifiers are written to blockchain and remain
                   separate from the public user portal.
                 </p>
+
+                {!isApproved && (
+                  <div className="mt-5 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+                    {approvalStatus === "rejected"
+                      ? "This manufacturer account has been rejected. Product registration is disabled."
+                      : "This manufacturer account is pending approval. Product registration will be enabled after admin approval."}
+                  </div>
+                )}
 
                 <div className="mt-6 grid gap-4 sm:grid-cols-2">
                   <div className="sm:col-span-2">
@@ -507,7 +557,7 @@ export default function ManufacturerDashboard({
                             : "border-slate-300 bg-white text-slate-700 hover:border-slate-400"
                         }`}
                       >
-                        IMEI (On-chain)
+                        IMEI
                       </button>
                       <button
                         type="button"
@@ -524,13 +574,11 @@ export default function ManufacturerDashboard({
                             : "border-slate-300 bg-white text-slate-700 hover:border-slate-400"
                         }`}
                       >
-                        MAC (Pending Backend Support)
+                        MAC Address
                       </button>
                     </div>
                     <p className="mt-2 text-xs text-slate-600">
-                      IMEI is the active blockchain registration mode. MAC
-                      support can be added later without changing this workspace
-                      structure.
+                      Select the product identifier you want to use for this record.
                     </p>
                   </div>
 
@@ -540,9 +588,11 @@ export default function ManufacturerDashboard({
                     onChange={(e) =>
                       setForm((prev) => ({
                         ...prev,
-                        identifier: e.target.value,
+                        identifier: normalizeIdentifierInput(prev.identifierType, e.target.value),
                       }))
                     }
+                    inputMode={form.identifierType === "imei" ? "numeric" : "text"}
+                    maxLength={form.identifierType === "imei" ? 15 : 17}
                     placeholder={
                       form.identifierType === "imei"
                         ? "IMEI (15 digits)"
@@ -657,10 +707,14 @@ export default function ManufacturerDashboard({
 
                 <button
                   onClick={handleRegister}
-                  disabled={submitting}
+                  disabled={submitting || !isApproved}
                   className="mt-5 inline-flex items-center rounded-xl bg-slate-900 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-400 disabled:text-slate-100"
                 >
-                  {submitting ? "Registering..." : "Register Product"}
+                  {submitting
+                    ? "Registering..."
+                    : isApproved
+                      ? "Register Product"
+                      : "Approval Required"}
                 </button>
               </div>
             )}
@@ -672,16 +726,56 @@ export default function ManufacturerDashboard({
                     Internal Manufacturer Verify
                   </h2>
                   <p className="mt-2 text-sm text-slate-600">
-                    Search a registered IMEI from inside the manufacturer portal
-                    before shipment or supplier handoff.
+                    Search a registered identifier from inside the manufacturer portal
+                    before release or internal review.
                   </p>
 
                   <div className="mt-6 space-y-4">
+                    <div className="flex flex-wrap gap-3 text-sm">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setVerifyIdentifierType("imei");
+                          setVerifyIdentifier("");
+                        }}
+                        className={`rounded-lg border px-4 py-2 transition ${
+                          verifyIdentifierType === "imei"
+                            ? "border-slate-900 bg-slate-900 text-white"
+                            : "border-slate-300 bg-white text-slate-700 hover:border-slate-400"
+                        }`}
+                      >
+                        IMEI
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setVerifyIdentifierType("mac");
+                          setVerifyIdentifier("");
+                        }}
+                        className={`rounded-lg border px-4 py-2 transition ${
+                          verifyIdentifierType === "mac"
+                            ? "border-slate-900 bg-slate-900 text-white"
+                            : "border-slate-300 bg-white text-slate-700 hover:border-slate-400"
+                        }`}
+                      >
+                        MAC Address
+                      </button>
+                    </div>
                     <input
                       type="text"
                       value={verifyIdentifier}
-                      onChange={(e) => setVerifyIdentifier(e.target.value)}
-                      placeholder="Enter 15-digit IMEI"
+                      onChange={(e) =>
+                        setVerifyIdentifier(
+                          normalizeIdentifierInput(verifyIdentifierType, e.target.value)
+                        )
+                      }
+                      inputMode={verifyIdentifierType === "imei" ? "numeric" : "text"}
+                      maxLength={verifyIdentifierType === "imei" ? 15 : 17}
+                      placeholder={
+                        verifyIdentifierType === "imei"
+                          ? "Enter 15-digit IMEI"
+                          : "Enter MAC (AA:BB:CC:DD:EE:FF)"
+                      }
                       className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm outline-none ring-sky-200 transition focus:ring"
                     />
 
@@ -718,7 +812,7 @@ export default function ManufacturerDashboard({
                   {!verifyResult?.product && (
                     <p className="mt-4 text-sm text-slate-600">
                       Verified product details will appear here after a
-                      successful IMEI check.
+                      successful verification check.
                     </p>
                   )}
 
@@ -750,10 +844,18 @@ export default function ManufacturerDashboard({
                       </div>
                       <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
                         <p className="text-xs uppercase tracking-wider text-slate-600">
-                          IMEI
+                          Identifier Type
                         </p>
                         <p className="mt-2 font-semibold text-slate-900">
-                          {verifyResult.product.imeiNumber}
+                          {verifyResult.product.identifierType?.toUpperCase()}
+                        </p>
+                      </div>
+                      <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                        <p className="text-xs uppercase tracking-wider text-slate-600">
+                          Identifier Value
+                        </p>
+                        <p className="mt-2 font-semibold text-slate-900">
+                          {verifyResult.product.identifierValue}
                         </p>
                       </div>
                       <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 md:col-span-2">
