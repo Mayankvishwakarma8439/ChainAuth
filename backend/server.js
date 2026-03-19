@@ -290,15 +290,66 @@ async function connectDatabase() {
   console.log("MongoDB connected");
 }
 
+async function addressHasCode(address) {
+  if (!address) {
+    return false;
+  }
+
+  try {
+    const code = await web3.eth.getCode(address);
+    return Boolean(code && code !== "0x");
+  } catch (error) {
+    console.warn(`Unable to check contract code at ${address}:`, error.message);
+    return false;
+  }
+}
+
+async function resolveContractAddress() {
+  const networkId = String(await web3.eth.net.getId());
+  const artifactNetworks = contractJson.networks || {};
+  const currentNetworkAddress = artifactNetworks[networkId]?.address || null;
+
+  if (contractAddress) {
+    const envAddressHasCode = await addressHasCode(contractAddress);
+    if (envAddressHasCode) {
+      console.log(`Using contract address from .env: ${contractAddress}`);
+      return contractAddress;
+    }
+
+    console.warn(
+      `Configured CONTRACT_ADDRESS ${contractAddress} has no deployed code. Falling back to Truffle artifact addresses.`
+    );
+  }
+
+  if (currentNetworkAddress && (await addressHasCode(currentNetworkAddress))) {
+    console.log(
+      `Using contract address from current network artifact (${networkId}): ${currentNetworkAddress}`
+    );
+    return currentNetworkAddress;
+  }
+
+  const networkIdsDescending = Object.keys(artifactNetworks)
+    .sort((a, b) => Number(b) - Number(a));
+
+  for (const artifactNetworkId of networkIdsDescending) {
+    const candidateAddress = artifactNetworks[artifactNetworkId]?.address;
+    if (candidateAddress && (await addressHasCode(candidateAddress))) {
+      console.log(
+        `Using latest valid contract address from artifact history (${artifactNetworkId}): ${candidateAddress}`
+      );
+      return candidateAddress;
+    }
+  }
+
+  return null;
+}
+
 async function initContract() {
   try {
     accounts = await web3.eth.getAccounts();
     console.log("Available accounts:", accounts);
 
-    if (!contractAddress) {
-      const networkId = await web3.eth.net.getId();
-      contractAddress = contractJson.networks[networkId]?.address;
-    }
+    contractAddress = await resolveContractAddress();
 
     if (contractAddress) {
       contract = new web3.eth.Contract(contractABI, contractAddress);

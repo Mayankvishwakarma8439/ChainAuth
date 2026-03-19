@@ -36,7 +36,13 @@ export default function ManufacturerForgotPassword({
             to help you reset your account password.
           </p>
 
-          <div className="space-y-4">
+          <form
+            className="space-y-4"
+            onSubmit={(e) => {
+              e.preventDefault();
+              onSubmit();
+            }}
+          >
             <input
               type="email"
               value={email}
@@ -48,13 +54,13 @@ export default function ManufacturerForgotPassword({
             {error && <p className="text-sm text-rose-600">{error}</p>}
 
             <button
-              onClick={onSubmit}
+              type="submit"
               disabled={loading}
               className="primary-btn w-full disabled:cursor-not-allowed disabled:opacity-60"
             >
               {loading ? "Sending OTP..." : "Send Reset OTP"}
             </button>
-          </div>
+          </form>
         </div>
       </div>
     </div>

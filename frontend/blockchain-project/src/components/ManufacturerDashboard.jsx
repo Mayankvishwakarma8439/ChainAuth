@@ -35,6 +35,21 @@ const workspaceSections = [
   },
 ];
 
+function getFriendlyVerificationError(response, data) {
+  const rawMessage = String(data?.error || data?.message || "").toLowerCase();
+
+  if (
+    response.status >= 500 ||
+    rawMessage.includes("contract not initialized") ||
+    rawMessage.includes("failed to verify") ||
+    rawMessage.includes("invalid response")
+  ) {
+    return "Verification is temporarily unavailable. Please try again in a moment.";
+  }
+
+  return data?.message || data?.error || "Product not found in registry.";
+}
+
 function ResultBanner({ result }) {
   if (!result) {
     return null;
@@ -63,6 +78,19 @@ export default function ManufacturerDashboard({
   authToken,
   onLogout,
 }) {
+  const normalizeTextField = (rawValue, maxLength = 80) =>
+    rawValue.replace(/\s{2,}/g, " ").slice(0, maxLength);
+
+  const normalizeAlphaNumericField = (rawValue, maxLength = 40) =>
+    rawValue
+      .toUpperCase()
+      .replace(/[^A-Z0-9\-\/\s]/g, "")
+      .replace(/\s{2,}/g, " ")
+      .slice(0, maxLength);
+
+  const normalizeNumberField = (rawValue, maxLength = 3) =>
+    rawValue.replace(/\D/g, "").slice(0, maxLength);
+
   const normalizeIdentifierInput = (identifierType, rawValue) => {
     if (identifierType === "imei") {
       return rawValue.replace(/\D/g, "").slice(0, 15);
@@ -70,6 +98,10 @@ export default function ManufacturerDashboard({
 
     const hexOnly = rawValue.toUpperCase().replace(/[^0-9A-F]/g, "").slice(0, 12);
     return hexOnly.match(/.{1,2}/g)?.join(":") || "";
+  };
+
+  const updateFormField = (field, value) => {
+    setForm((prev) => ({ ...prev, [field]: value }));
   };
 
   const [activeSection, setActiveSection] = useState("overview");
@@ -276,8 +308,7 @@ export default function ManufacturerDashboard({
       if (!response.ok || !data.isValid) {
         setVerifyResult({
           type: "error",
-          message:
-            data.message || data.error || "Product not found in registry.",
+          message: getFriendlyVerificationError(response, data),
         });
         return;
       }
@@ -537,7 +568,13 @@ export default function ManufacturerDashboard({
                   </div>
                 )}
 
-                <div className="mt-6 grid gap-4 sm:grid-cols-2">
+                <form
+                  className="mt-6 grid gap-4 sm:grid-cols-2"
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    handleRegister();
+                  }}
+                >
                   <div className="sm:col-span-2">
                     <div className="flex flex-wrap gap-3 text-sm">
                       <button
@@ -591,6 +628,7 @@ export default function ManufacturerDashboard({
                     }
                     inputMode={form.identifierType === "imei" ? "numeric" : "text"}
                     maxLength={form.identifierType === "imei" ? 15 : 17}
+                    autoComplete="off"
                     placeholder={
                       form.identifierType === "imei"
                         ? "IMEI (15 digits)"
@@ -602,54 +640,54 @@ export default function ManufacturerDashboard({
                     type="text"
                     value={form.productName}
                     onChange={(e) =>
-                      setForm((prev) => ({
-                        ...prev,
-                        productName: e.target.value,
-                      }))
+                      updateFormField("productName", normalizeTextField(e.target.value, 80))
                     }
                     placeholder="Product name"
+                    maxLength={80}
                     className="input-field"
                   />
                   <input
                     type="text"
                     value={form.brand}
                     onChange={(e) =>
-                      setForm((prev) => ({ ...prev, brand: e.target.value }))
+                      updateFormField("brand", normalizeTextField(e.target.value, 50))
                     }
                     placeholder="Brand"
+                    maxLength={50}
                     className="input-field"
                   />
                   <input
                     type="text"
                     value={form.model}
                     onChange={(e) =>
-                      setForm((prev) => ({ ...prev, model: e.target.value }))
+                      updateFormField("model", normalizeAlphaNumericField(e.target.value, 40))
                     }
                     placeholder="Model"
+                    maxLength={40}
                     className="input-field"
                   />
                   <input
                     type="text"
                     value={form.deviceType}
                     onChange={(e) =>
-                      setForm((prev) => ({
-                        ...prev,
-                        deviceType: e.target.value,
-                      }))
+                      updateFormField("deviceType", normalizeTextField(e.target.value, 40))
                     }
                     placeholder="Device type"
+                    maxLength={40}
                     className="input-field"
                   />
                   <input
                     type="text"
                     value={form.serialNumber}
                     onChange={(e) =>
-                      setForm((prev) => ({
-                        ...prev,
-                        serialNumber: e.target.value,
-                      }))
+                      updateFormField(
+                        "serialNumber",
+                        normalizeAlphaNumericField(e.target.value, 40)
+                      )
                     }
                     placeholder="Serial number"
+                    autoComplete="off"
+                    maxLength={40}
                     className="input-field"
                   />
                   <input
@@ -664,46 +702,50 @@ export default function ManufacturerDashboard({
                     className="input-field"
                   />
                   <input
-                    type="number"
-                    min="0"
+                    type="text"
+                    inputMode="numeric"
                     value={form.warrantyMonths}
                     onChange={(e) =>
-                      setForm((prev) => ({
-                        ...prev,
-                        warrantyMonths: e.target.value,
-                      }))
+                      updateFormField(
+                        "warrantyMonths",
+                        normalizeNumberField(e.target.value, 3)
+                      )
                     }
                     placeholder="Warranty (months)"
+                    maxLength={3}
                     className="input-field"
                   />
                   <input
                     type="text"
                     value={form.color}
                     onChange={(e) =>
-                      setForm((prev) => ({ ...prev, color: e.target.value }))
+                      updateFormField("color", normalizeTextField(e.target.value, 30))
                     }
                     placeholder="Color"
+                    maxLength={30}
                     className="input-field"
                   />
                   <input
                     type="text"
                     value={form.storageCapacity}
                     onChange={(e) =>
-                      setForm((prev) => ({
-                        ...prev,
-                        storageCapacity: e.target.value,
-                      }))
+                      updateFormField(
+                        "storageCapacity",
+                        normalizeAlphaNumericField(e.target.value, 30)
+                      )
                     }
                     placeholder="Storage / Capacity"
+                    maxLength={30}
                     className="input-field"
                   />
-                </div>
+                </form>
 
                 <div className="mt-5">
                   <ResultBanner result={registerResult} />
                 </div>
 
                 <button
+                  type="button"
                   onClick={handleRegister}
                   disabled={submitting || !isApproved}
                   className="primary-btn mt-5 disabled:cursor-not-allowed disabled:opacity-60"
@@ -728,7 +770,13 @@ export default function ManufacturerDashboard({
                     before release or internal review.
                   </p>
 
-                  <div className="mt-6 space-y-4">
+                  <form
+                    className="mt-6 space-y-4"
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      handleInternalVerify();
+                    }}
+                  >
                     <div className="flex flex-wrap gap-3 text-sm">
                       <button
                         type="button"
@@ -778,7 +826,7 @@ export default function ManufacturerDashboard({
                     />
 
                     <button
-                      onClick={handleInternalVerify}
+                      type="submit"
                       disabled={verifyLoading}
                       className="primary-btn disabled:cursor-not-allowed disabled:opacity-60"
                     >
@@ -796,7 +844,7 @@ export default function ManufacturerDashboard({
                         {verifyResult.message}
                       </div>
                     )}
-                  </div>
+                  </form>
                 </div>
 
                 <div className="glass-panel rounded-[2rem] p-6">

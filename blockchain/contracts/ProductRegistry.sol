@@ -59,7 +59,7 @@ contract ProductRegistry {
         string memory _productName,
         string memory _brand,
         string memory _model
-    ) public returns (bool) {
+    ) public {
         require(
             _isSupportedIdentifierType(_identifierType),
             "Unsupported identifier type"
@@ -103,8 +103,6 @@ contract ProductRegistry {
             msg.sender,
             block.timestamp
         );
-
-        return true;
     }
 
     function verifyProduct(

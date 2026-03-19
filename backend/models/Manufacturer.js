@@ -84,8 +84,4 @@ const manufacturerSchema = new mongoose.Schema(
   }
 );
 
-manufacturerSchema.index({ officialEmail: 1 }, { unique: true });
-manufacturerSchema.index({ registrationNumber: 1 }, { unique: true });
-manufacturerSchema.index({ walletAddress: 1 }, { unique: true });
-
 module.exports = mongoose.model("Manufacturer", manufacturerSchema);

@@ -35,7 +35,13 @@ export default function ManufacturerResetPassword({
             Choose a new password for your manufacturer account. Use at least 8 characters.
           </p>
 
-          <div className="space-y-4">
+          <form
+            className="space-y-4"
+            onSubmit={(e) => {
+              e.preventDefault();
+              onSubmit();
+            }}
+          >
             <input
               type="password"
               value={form.newPassword}
@@ -58,13 +64,13 @@ export default function ManufacturerResetPassword({
             {error && <p className="text-sm text-rose-600">{error}</p>}
 
             <button
-              onClick={onSubmit}
+              type="submit"
               disabled={loading}
               className="primary-btn w-full disabled:cursor-not-allowed disabled:opacity-60"
             >
               {loading ? "Resetting Password..." : "Reset Password"}
             </button>
-          </div>
+          </form>
         </div>
       </div>
     </div>

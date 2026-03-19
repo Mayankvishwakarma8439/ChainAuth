@@ -24,74 +24,81 @@ export default function ManufacturerSignup({ form, setForm, onSubmit, onBackToLo
             Enter legal company details. This account should map to the manufacturer wallet used for blockchain registration.
           </p>
 
-          <div className="grid gap-4 sm:grid-cols-2">
-            <input
-              type="text"
-              value={form.companyName}
-              onChange={(e) => setForm((prev) => ({ ...prev, companyName: e.target.value }))}
-              placeholder="Company legal name"
-              className="input-field"
-            />
-            <input
-              type="text"
-              value={form.registrationNumber}
-              onChange={(e) => setForm((prev) => ({ ...prev, registrationNumber: e.target.value }))}
-              placeholder="Business registration number"
-              className="input-field"
-            />
-            <input
-              type="email"
-              value={form.officialEmail}
-              onChange={(e) => setForm((prev) => ({ ...prev, officialEmail: e.target.value }))}
-              placeholder="Official company email"
-              className="input-field"
-            />
-            <input
-              type="tel"
-              value={form.contactNumber}
-              onChange={(e) => setForm((prev) => ({ ...prev, contactNumber: e.target.value }))}
-              placeholder="Contact number"
-              className="input-field"
-            />
-            <input
-              type="text"
-              value={form.country}
-              onChange={(e) => setForm((prev) => ({ ...prev, country: e.target.value }))}
-              placeholder="Country"
-              className="input-field"
-            />
-            <input
-              type="text"
-              value={form.walletAddress}
-              onChange={(e) => setForm((prev) => ({ ...prev, walletAddress: e.target.value }))}
-              placeholder="Ethereum wallet address"
-              className="input-field"
-            />
-            <input
-              type="password"
-              value={form.password}
-              onChange={(e) => setForm((prev) => ({ ...prev, password: e.target.value }))}
-              placeholder="Password"
-              className="input-field"
-            />
-            <input
-              type="password"
-              value={form.confirmPassword}
-              onChange={(e) => setForm((prev) => ({ ...prev, confirmPassword: e.target.value }))}
-              placeholder="Confirm password"
-              className="input-field"
-            />
-          </div>
-
-          {error && <p className="mt-4 text-sm text-rose-600">{error}</p>}
-
-          <button
-            onClick={onSubmit}
-            disabled={loading}
-            className="primary-btn mt-5 w-full disabled:cursor-not-allowed disabled:opacity-60"
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              onSubmit();
+            }}
           >
-            {loading ? "Creating account..." : "Create Manufacturer Account"}
-          </button>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <input
+                type="text"
+                value={form.companyName}
+                onChange={(e) => setForm((prev) => ({ ...prev, companyName: e.target.value }))}
+                placeholder="Company legal name"
+                className="input-field"
+              />
+              <input
+                type="text"
+                value={form.registrationNumber}
+                onChange={(e) => setForm((prev) => ({ ...prev, registrationNumber: e.target.value }))}
+                placeholder="Business registration number"
+                className="input-field"
+              />
+              <input
+                type="email"
+                value={form.officialEmail}
+                onChange={(e) => setForm((prev) => ({ ...prev, officialEmail: e.target.value }))}
+                placeholder="Official company email"
+                className="input-field"
+              />
+              <input
+                type="tel"
+                value={form.contactNumber}
+                onChange={(e) => setForm((prev) => ({ ...prev, contactNumber: e.target.value }))}
+                placeholder="Contact number"
+                className="input-field"
+              />
+              <input
+                type="text"
+                value={form.country}
+                onChange={(e) => setForm((prev) => ({ ...prev, country: e.target.value }))}
+                placeholder="Country"
+                className="input-field"
+              />
+              <input
+                type="text"
+                value={form.walletAddress}
+                onChange={(e) => setForm((prev) => ({ ...prev, walletAddress: e.target.value }))}
+                placeholder="Ethereum wallet address"
+                className="input-field"
+              />
+              <input
+                type="password"
+                value={form.password}
+                onChange={(e) => setForm((prev) => ({ ...prev, password: e.target.value }))}
+                placeholder="Password"
+                className="input-field"
+              />
+              <input
+                type="password"
+                value={form.confirmPassword}
+                onChange={(e) => setForm((prev) => ({ ...prev, confirmPassword: e.target.value }))}
+                placeholder="Confirm password"
+                className="input-field"
+              />
+            </div>
+
+            {error && <p className="mt-4 text-sm text-rose-600">{error}</p>}
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="primary-btn mt-5 w-full disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {loading ? "Creating account..." : "Create Manufacturer Account"}
+            </button>
+          </form>
 
           <p className="mt-4 text-sm text-slate-600">
             Already have an account?{" "}

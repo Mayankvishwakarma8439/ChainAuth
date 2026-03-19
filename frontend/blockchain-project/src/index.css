@@ -27,7 +27,6 @@ html {
 
 body {
   min-height: 100vh;
-  overflow-x: hidden;
   background:
     radial-gradient(circle at 10% 16%, rgba(114, 220, 255, 0.28), transparent 24%),
     radial-gradient(circle at 88% 14%, rgba(121, 178, 255, 0.24), transparent 22%),
@@ -133,8 +132,7 @@ body {
   .page-shell {
     position: relative;
     min-height: 100vh;
-    overflow-x: hidden;
-    overflow-y: visible;
+    overflow: hidden;
     background: transparent;
     color: var(--text-main);
   }

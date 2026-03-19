@@ -22,7 +22,13 @@ export default function ManufacturerLogin({ form, setForm, onSubmit, onBack, onG
 
           <p className="mb-6 text-sm leading-6 text-slate-600">Login to register electronics products and manage on-chain records.</p>
 
-          <div className="space-y-4">
+          <form
+            className="space-y-4"
+            onSubmit={(e) => {
+              e.preventDefault();
+              onSubmit();
+            }}
+          >
             <input
               type="email"
               value={form.email}
@@ -41,7 +47,7 @@ export default function ManufacturerLogin({ form, setForm, onSubmit, onBack, onG
             {loginError && <p className="text-sm text-rose-600">{loginError}</p>}
 
             <button
-              onClick={onSubmit}
+              type="submit"
               disabled={loading}
               className="primary-btn w-full disabled:cursor-not-allowed disabled:opacity-60"
             >
@@ -55,7 +61,7 @@ export default function ManufacturerLogin({ form, setForm, onSubmit, onBack, onG
             >
               Forgot password?
             </button>
-          </div>
+          </form>
 
           <p className="mt-5 text-sm text-slate-600">
             New manufacturer?{" "}

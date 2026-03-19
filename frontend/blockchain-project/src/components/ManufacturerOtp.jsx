@@ -46,7 +46,13 @@ export default function ManufacturerOtp({
             </div>
           )}
 
-          <div className="space-y-4">
+          <form
+            className="space-y-4"
+            onSubmit={(e) => {
+              e.preventDefault();
+              onVerify();
+            }}
+          >
             <input
               type="text"
               value={otpCode}
@@ -60,7 +66,7 @@ export default function ManufacturerOtp({
             {error && <p className="text-sm text-rose-600">{error}</p>}
 
             <button
-              onClick={onVerify}
+              type="submit"
               disabled={loading}
               className="primary-btn w-full disabled:cursor-not-allowed disabled:opacity-60"
             >
@@ -75,7 +81,7 @@ export default function ManufacturerOtp({
               <RefreshCcw className="mr-2 h-4 w-4" />
               Resend OTP
             </button>
-          </div>
+          </form>
         </div>
       </div>
     </div>

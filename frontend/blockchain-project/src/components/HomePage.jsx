@@ -402,7 +402,13 @@ export default function HomePage({
               </button>
             </div>
 
-            <div className="mt-4 flex flex-col gap-3 sm:flex-row">
+            <form
+              className="mt-4 flex flex-col gap-3 sm:flex-row"
+              onSubmit={(e) => {
+                e.preventDefault();
+                checkIdentifier();
+              }}
+            >
               <input
                 type="text"
                 value={verificationInput}
@@ -417,13 +423,13 @@ export default function HomePage({
                 className="input-field"
               />
               <button
-                onClick={checkIdentifier}
+                type="submit"
                 disabled={verifying}
                 className="primary-btn disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {verifying ? "Verifying..." : "Verify"}
               </button>
-            </div>
+            </form>
 
             <div className="mt-4 rounded-[1.35rem] border border-white/70 bg-white/45 p-4 backdrop-blur-xl">
               <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">

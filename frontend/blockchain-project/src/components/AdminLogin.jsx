@@ -20,7 +20,13 @@ export default function AdminLogin({ form, setForm, onSubmit, loading, error }) 
             Sign in to the private approval console. This area is separate from the public manufacturer and user portals.
           </p>
 
-          <div className="space-y-4">
+          <form
+            className="space-y-4"
+            onSubmit={(e) => {
+              e.preventDefault();
+              onSubmit();
+            }}
+          >
             <div>
               <label className="mb-2 block text-sm font-medium text-slate-700">
                 Admin Email
@@ -53,13 +59,13 @@ export default function AdminLogin({ form, setForm, onSubmit, loading, error }) 
             {error && <p className="text-sm text-rose-600">{error}</p>}
 
             <button
-              onClick={onSubmit}
+              type="submit"
               disabled={loading}
               className="primary-btn w-full disabled:cursor-not-allowed disabled:opacity-60"
             >
               {loading ? "Signing in..." : "Enter Admin Portal"}
             </button>
-          </div>
+          </form>
         </div>
       </div>
     </div>
