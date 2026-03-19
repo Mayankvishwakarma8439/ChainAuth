@@ -298,21 +298,22 @@ export default function ManufacturerDashboard({
   };
 
   return (
-    <div className="min-h-screen overflow-hidden bg-slate-100 text-slate-900">
+    <div className="page-shell">
+      <div className="background-nebula" />
       <div className="pointer-events-none absolute inset-0">
-        <div className="absolute left-0 top-0 h-72 w-72 rounded-full bg-sky-200/70 blur-3xl" />
-        <div className="absolute bottom-0 right-10 h-80 w-80 rounded-full bg-white blur-3xl" />
+        <div className="ambient-orb left-0 top-0 h-72 w-72 bg-sky-200/70" />
+        <div className="ambient-orb bottom-0 right-10 h-80 w-80 bg-white/90" style={{ animationDelay: "1.4s" }} />
       </div>
 
       <div className="relative z-10 mx-auto flex min-h-screen max-w-7xl flex-col px-4 py-6 sm:px-6 lg:px-8">
-        <header className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+        <header className="hero-card rounded-[2rem] p-5">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div className="flex items-start gap-4">
-              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3">
+              <div className="glass-card rounded-2xl bg-white/60 p-3">
                 <Blocks className="h-8 w-8 text-sky-700" />
               </div>
               <div>
-                <div className="inline-flex items-center gap-2 rounded-full border border-sky-200 bg-sky-50 px-3 py-1 text-xs text-sky-700">
+                <div className="section-kicker">
                   <ShieldCheck className="h-3.5 w-3.5" />
                   Separate Manufacturer Workspace
                 </div>
@@ -326,7 +327,7 @@ export default function ManufacturerDashboard({
             </div>
 
             <div className="flex flex-wrap items-center gap-3">
-              <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-right">
+              <div className="glass-card rounded-2xl bg-white/70 px-4 py-3 text-right">
                 <p className="text-xs uppercase tracking-widest text-slate-600">
                   Signed In As
                 </p>
@@ -339,7 +340,7 @@ export default function ManufacturerDashboard({
               </div>
               <button
                 onClick={onLogout}
-                className="inline-flex items-center rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm font-medium text-slate-700 transition hover:border-slate-400"
+                className="secondary-btn"
               >
                 <LogOut className="mr-2 h-4 w-4" />
                 Logout
@@ -349,7 +350,7 @@ export default function ManufacturerDashboard({
         </header>
 
         <div className="mt-6 grid flex-1 gap-6 lg:grid-cols-[280px_minmax(0,1fr)]">
-          <aside className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+          <aside className="glass-panel rounded-[2rem] p-5">
             <p className="text-xs font-semibold uppercase tracking-[0.3em] text-sky-700">
               Workspace
             </p>
@@ -363,8 +364,8 @@ export default function ManufacturerDashboard({
                     onClick={() => setActiveSection(section.id)}
                     className={`w-full rounded-2xl border p-4 text-left transition ${
                       isActive
-                        ? "border-sky-200 bg-sky-50"
-                        : "border-slate-200 bg-white hover:border-slate-300"
+                        ? "border-sky-200 bg-sky-50 shadow-sm"
+                        : "border-white/70 bg-white/70 hover:border-slate-300 hover:-translate-y-0.5"
                     }`}
                   >
                     <div className="flex items-center gap-3">
@@ -389,10 +390,7 @@ export default function ManufacturerDashboard({
           <section className="space-y-6">
             <div className="grid gap-4 md:grid-cols-3">
               {manufacturerStats.map((stat) => (
-                <div
-                  key={stat.label}
-                  className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"
-                >
+                <div key={stat.label} className="glass-card rounded-[1.5rem] p-5">
                   <p className="text-xs uppercase tracking-wider text-slate-600">
                     {stat.label}
                   </p>
@@ -405,7 +403,7 @@ export default function ManufacturerDashboard({
 
             {activeSection === "overview" && (
               <div className="grid gap-6 xl:grid-cols-[1.3fr_0.9fr]">
-                <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+                <div className="hero-card rounded-[2rem] p-6">
                   <div className="flex items-center gap-3">
                     <Factory className="h-6 w-6 text-sky-700" />
                     <div>
@@ -422,7 +420,7 @@ export default function ManufacturerDashboard({
                   <div className="mt-6 grid gap-4 md:grid-cols-2">
                     <button
                       onClick={() => setActiveSection("register")}
-                      className="rounded-2xl border border-slate-200 bg-slate-50 p-5 text-left transition hover:border-slate-300 hover:bg-white"
+                      className="glass-card rounded-2xl bg-white/75 p-5 text-left"
                     >
                       <p className="text-sm font-semibold text-sky-700">
                         Register New Product
@@ -439,7 +437,7 @@ export default function ManufacturerDashboard({
 
                     <button
                       onClick={() => setActiveSection("verify")}
-                      className="rounded-2xl border border-slate-200 bg-slate-50 p-5 text-left transition hover:border-slate-300 hover:bg-white"
+                      className="glass-card rounded-2xl bg-white/75 p-5 text-left"
                     >
                       <p className="text-sm font-semibold text-slate-800">
                         Internal Product Verify
@@ -457,7 +455,7 @@ export default function ManufacturerDashboard({
                 </div>
 
                 <div className="space-y-4">
-                  <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+                  <div className="glass-card rounded-[2rem] p-6">
                     <div className="flex items-center gap-2">
                       <FileBadge className="h-5 w-5 text-sky-700" />
                       <h3 className="text-lg font-semibold">
@@ -486,7 +484,7 @@ export default function ManufacturerDashboard({
                     </div>
                   </div>
 
-                  <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+                  <div className="glass-card rounded-[2rem] p-6">
                     <div className="flex items-center gap-2">
                       <BadgeCheck className="h-5 w-5 text-sky-700" />
                       <h3 className="text-lg font-semibold">
@@ -523,7 +521,7 @@ export default function ManufacturerDashboard({
             )}
 
             {activeSection === "register" && (
-              <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+              <div className="hero-card rounded-[2rem] p-6">
                 <h2 className="text-xl font-semibold">Register New Product</h2>
                 <p className="mt-2 text-sm text-slate-600">
                   This form is part of the manufacturer-only workspace.
@@ -551,10 +549,10 @@ export default function ManufacturerDashboard({
                             identifier: "",
                           }))
                         }
-                        className={`rounded-lg border px-4 py-2 transition ${
+                        className={`tab-chip ${
                           form.identifierType === "imei"
-                            ? "border-slate-900 bg-slate-900 text-white"
-                            : "border-slate-300 bg-white text-slate-700 hover:border-slate-400"
+                            ? "tab-chip-active"
+                            : ""
                         }`}
                       >
                         IMEI
@@ -568,10 +566,10 @@ export default function ManufacturerDashboard({
                             identifier: "",
                           }))
                         }
-                        className={`rounded-lg border px-4 py-2 transition ${
+                        className={`tab-chip ${
                           form.identifierType === "mac"
-                            ? "border-slate-900 bg-slate-900 text-white"
-                            : "border-slate-300 bg-white text-slate-700 hover:border-slate-400"
+                            ? "tab-chip-active"
+                            : ""
                         }`}
                       >
                         MAC Address
@@ -598,7 +596,7 @@ export default function ManufacturerDashboard({
                         ? "IMEI (15 digits)"
                         : "MAC (AA:BB:CC:DD:EE:FF)"
                     }
-                    className="rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm outline-none ring-sky-200 transition focus:ring"
+                    className="input-field"
                   />
                   <input
                     type="text"
@@ -610,7 +608,7 @@ export default function ManufacturerDashboard({
                       }))
                     }
                     placeholder="Product name"
-                    className="rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm outline-none ring-sky-200 transition focus:ring"
+                    className="input-field"
                   />
                   <input
                     type="text"
@@ -619,7 +617,7 @@ export default function ManufacturerDashboard({
                       setForm((prev) => ({ ...prev, brand: e.target.value }))
                     }
                     placeholder="Brand"
-                    className="rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm outline-none ring-sky-200 transition focus:ring"
+                    className="input-field"
                   />
                   <input
                     type="text"
@@ -628,7 +626,7 @@ export default function ManufacturerDashboard({
                       setForm((prev) => ({ ...prev, model: e.target.value }))
                     }
                     placeholder="Model"
-                    className="rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm outline-none ring-sky-200 transition focus:ring"
+                    className="input-field"
                   />
                   <input
                     type="text"
@@ -640,7 +638,7 @@ export default function ManufacturerDashboard({
                       }))
                     }
                     placeholder="Device type"
-                    className="rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm outline-none ring-sky-200 transition focus:ring"
+                    className="input-field"
                   />
                   <input
                     type="text"
@@ -652,7 +650,7 @@ export default function ManufacturerDashboard({
                       }))
                     }
                     placeholder="Serial number"
-                    className="rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm outline-none ring-sky-200 transition focus:ring"
+                    className="input-field"
                   />
                   <input
                     type="date"
@@ -663,7 +661,7 @@ export default function ManufacturerDashboard({
                         manufactureDate: e.target.value,
                       }))
                     }
-                    className="rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm outline-none ring-sky-200 transition focus:ring"
+                    className="input-field"
                   />
                   <input
                     type="number"
@@ -676,7 +674,7 @@ export default function ManufacturerDashboard({
                       }))
                     }
                     placeholder="Warranty (months)"
-                    className="rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm outline-none ring-sky-200 transition focus:ring"
+                    className="input-field"
                   />
                   <input
                     type="text"
@@ -685,7 +683,7 @@ export default function ManufacturerDashboard({
                       setForm((prev) => ({ ...prev, color: e.target.value }))
                     }
                     placeholder="Color"
-                    className="rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm outline-none ring-sky-200 transition focus:ring"
+                    className="input-field"
                   />
                   <input
                     type="text"
@@ -697,7 +695,7 @@ export default function ManufacturerDashboard({
                       }))
                     }
                     placeholder="Storage / Capacity"
-                    className="rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm outline-none ring-sky-200 transition focus:ring"
+                    className="input-field"
                   />
                 </div>
 
@@ -708,7 +706,7 @@ export default function ManufacturerDashboard({
                 <button
                   onClick={handleRegister}
                   disabled={submitting || !isApproved}
-                  className="mt-5 inline-flex items-center rounded-xl bg-slate-900 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-400 disabled:text-slate-100"
+                  className="primary-btn mt-5 disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   {submitting
                     ? "Registering..."
@@ -721,7 +719,7 @@ export default function ManufacturerDashboard({
 
             {activeSection === "verify" && (
               <div className="grid gap-6 xl:grid-cols-[0.95fr_1.05fr]">
-                <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+                <div className="hero-card rounded-[2rem] p-6">
                   <h2 className="text-xl font-semibold">
                     Internal Manufacturer Verify
                   </h2>
@@ -738,10 +736,10 @@ export default function ManufacturerDashboard({
                           setVerifyIdentifierType("imei");
                           setVerifyIdentifier("");
                         }}
-                        className={`rounded-lg border px-4 py-2 transition ${
+                        className={`tab-chip ${
                           verifyIdentifierType === "imei"
-                            ? "border-slate-900 bg-slate-900 text-white"
-                            : "border-slate-300 bg-white text-slate-700 hover:border-slate-400"
+                            ? "tab-chip-active"
+                            : ""
                         }`}
                       >
                         IMEI
@@ -752,10 +750,10 @@ export default function ManufacturerDashboard({
                           setVerifyIdentifierType("mac");
                           setVerifyIdentifier("");
                         }}
-                        className={`rounded-lg border px-4 py-2 transition ${
+                        className={`tab-chip ${
                           verifyIdentifierType === "mac"
-                            ? "border-slate-900 bg-slate-900 text-white"
-                            : "border-slate-300 bg-white text-slate-700 hover:border-slate-400"
+                            ? "tab-chip-active"
+                            : ""
                         }`}
                       >
                         MAC Address
@@ -776,13 +774,13 @@ export default function ManufacturerDashboard({
                           ? "Enter 15-digit IMEI"
                           : "Enter MAC (AA:BB:CC:DD:EE:FF)"
                       }
-                      className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm outline-none ring-sky-200 transition focus:ring"
+                      className="input-field"
                     />
 
                     <button
                       onClick={handleInternalVerify}
                       disabled={verifyLoading}
-                      className="inline-flex items-center rounded-xl bg-slate-900 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-400 disabled:text-slate-100"
+                      className="primary-btn disabled:cursor-not-allowed disabled:opacity-60"
                     >
                       {verifyLoading ? "Verifying..." : "Verify Product"}
                     </button>
@@ -801,7 +799,7 @@ export default function ManufacturerDashboard({
                   </div>
                 </div>
 
-                <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+                <div className="glass-panel rounded-[2rem] p-6">
                   <div className="flex items-center gap-2">
                     <SearchCheck className="h-5 w-5 text-sky-700" />
                     <h3 className="text-lg font-semibold">
@@ -818,7 +816,7 @@ export default function ManufacturerDashboard({
 
                   {verifyResult?.product && (
                     <div className="mt-5 grid gap-4 md:grid-cols-2">
-                      <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                      <div className="glass-card rounded-2xl bg-white/80 p-4">
                         <p className="text-xs uppercase tracking-wider text-slate-600">
                           Product Name
                         </p>
@@ -826,7 +824,7 @@ export default function ManufacturerDashboard({
                           {verifyResult.product.productName}
                         </p>
                       </div>
-                      <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                      <div className="glass-card rounded-2xl bg-white/80 p-4">
                         <p className="text-xs uppercase tracking-wider text-slate-600">
                           Brand
                         </p>
@@ -834,7 +832,7 @@ export default function ManufacturerDashboard({
                           {verifyResult.product.brand}
                         </p>
                       </div>
-                      <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                      <div className="glass-card rounded-2xl bg-white/80 p-4">
                         <p className="text-xs uppercase tracking-wider text-slate-600">
                           Model
                         </p>
@@ -842,7 +840,7 @@ export default function ManufacturerDashboard({
                           {verifyResult.product.model}
                         </p>
                       </div>
-                      <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                      <div className="glass-card rounded-2xl bg-white/80 p-4">
                         <p className="text-xs uppercase tracking-wider text-slate-600">
                           Identifier Type
                         </p>
@@ -850,7 +848,7 @@ export default function ManufacturerDashboard({
                           {verifyResult.product.identifierType?.toUpperCase()}
                         </p>
                       </div>
-                      <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                      <div className="glass-card rounded-2xl bg-white/80 p-4">
                         <p className="text-xs uppercase tracking-wider text-slate-600">
                           Identifier Value
                         </p>
@@ -858,7 +856,7 @@ export default function ManufacturerDashboard({
                           {verifyResult.product.identifierValue}
                         </p>
                       </div>
-                      <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 md:col-span-2">
+                      <div className="glass-card rounded-2xl bg-white/80 p-4 md:col-span-2">
                         <p className="text-xs uppercase tracking-wider text-slate-600">
                           Manufacturer Address
                         </p>
@@ -866,7 +864,7 @@ export default function ManufacturerDashboard({
                           {verifyResult.product.manufacturer}
                         </p>
                       </div>
-                      <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 md:col-span-2">
+                      <div className="glass-card rounded-2xl bg-white/80 p-4 md:col-span-2">
                         <p className="text-xs uppercase tracking-wider text-slate-600">
                           Registration Date
                         </p>

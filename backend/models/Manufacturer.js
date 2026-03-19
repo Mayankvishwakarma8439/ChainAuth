@@ -55,7 +55,7 @@ const manufacturerSchema = new mongoose.Schema(
     },
     otpPurpose: {
       type: String,
-      enum: ["signup", "login", null],
+      enum: ["signup", "login", "password-reset", null],
       default: null,
     },
     otpExpiresAt: {

@@ -3,9 +3,14 @@ import { LockKeyhole, ShieldCheck } from "lucide-react";
 
 export default function AdminLogin({ form, setForm, onSubmit, loading, error }) {
   return (
-    <div className="min-h-screen bg-slate-100 px-4 py-10 text-slate-900 sm:px-6 lg:px-8">
+    <div className="page-shell px-4 py-10 sm:px-6 lg:px-8">
+      <div className="background-nebula" />
+      <div className="pointer-events-none absolute inset-0">
+        <div className="ambient-orb left-10 top-12 h-60 w-60 bg-sky-200/75" />
+        <div className="ambient-orb bottom-8 right-8 h-80 w-80 bg-white/90" style={{ animationDelay: "1.1s" }} />
+      </div>
       <div className="mx-auto max-w-md">
-        <div className="rounded-2xl border border-slate-200 bg-white p-7 shadow-sm">
+        <div className="hero-card rounded-[2rem] p-7">
           <div className="mb-5 flex items-center gap-2">
             <ShieldCheck className="h-6 w-6 text-sky-700" />
             <h1 className="text-2xl font-semibold">Admin Login</h1>
@@ -25,7 +30,7 @@ export default function AdminLogin({ form, setForm, onSubmit, loading, error }) 
                 value={form.email}
                 placeholder="Enter admin email"
                 onChange={(e) => setForm((prev) => ({ ...prev, email: e.target.value }))}
-                className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm outline-none ring-sky-200 transition focus:ring"
+                className="input-field"
               />
             </div>
 
@@ -40,7 +45,7 @@ export default function AdminLogin({ form, setForm, onSubmit, loading, error }) 
                   value={form.password}
                   onChange={(e) => setForm((prev) => ({ ...prev, password: e.target.value }))}
                   placeholder="Enter admin password"
-                  className="w-full rounded-xl border border-slate-300 bg-white py-3 pl-10 pr-4 text-sm outline-none ring-sky-200 transition focus:ring"
+                  className="input-field py-3 pl-10 pr-4"
                 />
               </div>
             </div>
@@ -50,7 +55,7 @@ export default function AdminLogin({ form, setForm, onSubmit, loading, error }) 
             <button
               onClick={onSubmit}
               disabled={loading}
-              className="w-full rounded-xl bg-slate-900 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-400 disabled:text-slate-100"
+              className="primary-btn w-full disabled:cursor-not-allowed disabled:opacity-60"
             >
               {loading ? "Signing in..." : "Enter Admin Portal"}
             </button>

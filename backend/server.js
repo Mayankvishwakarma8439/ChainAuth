@@ -31,6 +31,8 @@ const OTP_RESEND_COOLDOWN_SECONDS =
 const OTP_MAX_ATTEMPTS = Number(process.env.OTP_MAX_ATTEMPTS) || 5;
 const LOGIN_MAX_ATTEMPTS = Number(process.env.LOGIN_MAX_ATTEMPTS) || 5;
 const LOGIN_LOCK_MINUTES = Number(process.env.LOGIN_LOCK_MINUTES) || 15;
+const PASSWORD_RESET_TOKEN_EXPIRY_MINUTES =
+  Number(process.env.PASSWORD_RESET_TOKEN_EXPIRY_MINUTES) || 10;
 const RESEND_API_KEY = process.env.RESEND_API_KEY || "";
 const RESEND_FROM_EMAIL =
   process.env.RESEND_FROM_EMAIL || "onboarding@resend.dev";
@@ -118,12 +120,19 @@ async function sendOtpEmail(to, otp, purpose) {
   const subject =
     purpose === "signup"
       ? "Verify your manufacturer signup"
-      : "Verify your manufacturer login";
+      : purpose === "password-reset"
+        ? "Reset your manufacturer password"
+        : "Verify your manufacturer login";
+
+  const introText =
+    purpose === "password-reset"
+      ? "Use this OTP to continue resetting your password:"
+      : "Your one-time password is:";
 
   const html = `
     <div style="font-family: Arial, sans-serif; color: #0f172a; line-height: 1.6;">
       <h2 style="margin-bottom: 12px;">ChainAuth Manufacturer Verification</h2>
-      <p>Your one-time password is:</p>
+      <p>${introText}</p>
       <div style="display: inline-block; padding: 12px 18px; border-radius: 10px; background: #e0f2fe; color: #0f172a; font-size: 24px; font-weight: 700; letter-spacing: 6px;">
         ${otp}
       </div>
@@ -261,6 +270,18 @@ function createAdminToken() {
     },
     JWT_SECRET,
     { expiresIn: "12h" }
+  );
+}
+
+function createPasswordResetToken(manufacturer) {
+  return jwt.sign(
+    {
+      manufacturerId: manufacturer._id.toString(),
+      officialEmail: manufacturer.officialEmail,
+      purpose: "password-reset",
+    },
+    JWT_SECRET,
+    { expiresIn: `${PASSWORD_RESET_TOKEN_EXPIRY_MINUTES}m` }
   );
 }
 
@@ -866,6 +887,111 @@ app.post("/api/manufacturers/verify-login-otp", async (req, res) => {
   }
 });
 
+app.post("/api/manufacturers/forgot-password", async (req, res) => {
+  try {
+    const { email } = req.body || {};
+
+    if (!email) {
+      return res.status(400).json({ error: "Email is required" });
+    }
+
+    const normalizedEmail = String(email).trim().toLowerCase();
+    const manufacturer = await Manufacturer.findOne({
+      officialEmail: normalizedEmail,
+    });
+
+    if (manufacturer && manufacturer.emailVerified) {
+      if (!canResendOtp(manufacturer)) {
+        return res.status(429).json({
+          error: `Please wait ${OTP_RESEND_COOLDOWN_SECONDS} seconds before requesting a new OTP`,
+        });
+      }
+
+      const otp = await assignAndSendOtp(manufacturer, "password-reset");
+
+      return res.json(
+        buildOtpResponse(
+          "If this email exists, a password reset OTP has been sent.",
+          otp
+        )
+      );
+    }
+
+    return res.json({
+      success: true,
+      message: "If this email exists, a password reset OTP has been sent.",
+    });
+  } catch (error) {
+    console.error("Forgot password request failed:", error);
+    return res.status(500).json({
+      error: "Failed to start password reset",
+      details: error.message,
+    });
+  }
+});
+
+app.post("/api/manufacturers/verify-reset-otp", async (req, res) => {
+  try {
+    const { email, otp } = req.body || {};
+
+    if (!email || !otp) {
+      return res.status(400).json({ error: "Email and OTP are required" });
+    }
+
+    const manufacturer = await Manufacturer.findOne({
+      officialEmail: String(email).trim().toLowerCase(),
+    });
+
+    if (!manufacturer) {
+      return res.status(404).json({ error: "Manufacturer account not found" });
+    }
+
+    if (!manufacturer.emailVerified) {
+      return res.status(403).json({ error: "Email verification is required" });
+    }
+
+    if (manufacturer.otpPurpose !== "password-reset" || !manufacturer.otpHash) {
+      return res.status(400).json({ error: "No password reset OTP is active" });
+    }
+
+    if (
+      !manufacturer.otpExpiresAt ||
+      new Date(manufacturer.otpExpiresAt).getTime() < Date.now()
+    ) {
+      clearOtpState(manufacturer);
+      await manufacturer.save();
+      return res.status(400).json({ error: "OTP has expired" });
+    }
+
+    if (manufacturer.otpAttemptCount >= OTP_MAX_ATTEMPTS) {
+      clearOtpState(manufacturer);
+      await manufacturer.save();
+      return res.status(429).json({ error: "Maximum OTP attempts exceeded" });
+    }
+
+    if (manufacturer.otpHash !== hashOtp(otp)) {
+      manufacturer.otpAttemptCount += 1;
+      await manufacturer.save();
+      return res.status(400).json({ error: "Invalid OTP" });
+    }
+
+    clearOtpState(manufacturer);
+    await manufacturer.save();
+
+    return res.json({
+      success: true,
+      message: "OTP verified successfully.",
+      resetToken: createPasswordResetToken(manufacturer),
+    });
+  } catch (error) {
+    console.error("Reset OTP verification failed:", error);
+    return res.status(500).json({
+      error: "Failed to verify reset OTP",
+      details: error.message,
+    });
+  }
+});
+
 app.post("/api/manufacturers/resend-otp", async (req, res) => {
   try {
     const { email, purpose } = req.body || {};
@@ -874,7 +1000,7 @@ app.post("/api/manufacturers/resend-otp", async (req, res) => {
       return res.status(400).json({ error: "Email and purpose are required" });
     }
 
-    if (!["signup", "login"].includes(purpose)) {
+    if (!["signup", "login", "password-reset"].includes(purpose)) {
       return res.status(400).json({ error: "Invalid OTP purpose" });
     }
 
@@ -886,7 +1012,10 @@ app.post("/api/manufacturers/resend-otp", async (req, res) => {
       return res.status(404).json({ error: "Manufacturer account not found" });
     }
 
-    if (purpose === "login" && !manufacturer.emailVerified) {
+    if (
+      (purpose === "login" || purpose === "password-reset") &&
+      !manufacturer.emailVerified
+    ) {
       return res.status(403).json({ error: "Email verification is required" });
     }
 
@@ -905,6 +1034,70 @@ app.post("/api/manufacturers/resend-otp", async (req, res) => {
     console.error("OTP resend failed:", error);
     return res.status(500).json({
       error: "Failed to resend OTP",
+      details: error.message,
+    });
+  }
+});
+
+app.post("/api/manufacturers/reset-password", async (req, res) => {
+  try {
+    const { resetToken, newPassword, confirmPassword } = req.body || {};
+
+    if (!resetToken || !newPassword || !confirmPassword) {
+      return res.status(400).json({
+        error: "Reset token, new password, and confirm password are required",
+      });
+    }
+
+    if (String(newPassword).length < 8) {
+      return res
+        .status(400)
+        .json({ error: "Password must be at least 8 characters" });
+    }
+
+    if (String(newPassword) !== String(confirmPassword)) {
+      return res
+        .status(400)
+        .json({ error: "Password and confirm password do not match" });
+    }
+
+    let payload;
+    try {
+      payload = jwt.verify(resetToken, JWT_SECRET);
+    } catch (error) {
+      return res.status(401).json({ error: "Invalid or expired reset token" });
+    }
+
+    if (payload?.purpose !== "password-reset" || !payload?.manufacturerId) {
+      return res.status(401).json({ error: "Invalid reset token" });
+    }
+
+    const manufacturer = await Manufacturer.findById(payload.manufacturerId);
+
+    if (!manufacturer) {
+      return res.status(404).json({ error: "Manufacturer account not found" });
+    }
+
+    if (
+      manufacturer.officialEmail.toLowerCase() !==
+      String(payload.officialEmail || "").toLowerCase()
+    ) {
+      return res.status(401).json({ error: "Invalid reset token" });
+    }
+
+    manufacturer.passwordHash = await bcrypt.hash(String(newPassword), 12);
+    clearOtpState(manufacturer);
+    resetLoginAttemptState(manufacturer);
+    await manufacturer.save();
+
+    return res.json({
+      success: true,
+      message: "Password reset successfully. You can now login.",
+    });
+  } catch (error) {
+    console.error("Password reset failed:", error);
+    return res.status(500).json({
+      error: "Failed to reset password",
       details: error.message,
     });
   }
@@ -1042,12 +1235,17 @@ async function startServer() {
       );
       console.log(`- POST http://localhost:${PORT}/api/manufacturers/signup`);
       console.log(`- POST http://localhost:${PORT}/api/manufacturers/login`);
+      console.log(`- POST http://localhost:${PORT}/api/manufacturers/forgot-password`);
       console.log(
         `- POST http://localhost:${PORT}/api/manufacturers/verify-signup-otp`
       );
       console.log(
         `- POST http://localhost:${PORT}/api/manufacturers/verify-login-otp`
       );
+      console.log(
+        `- POST http://localhost:${PORT}/api/manufacturers/verify-reset-otp`
+      );
+      console.log(`- POST http://localhost:${PORT}/api/manufacturers/reset-password`);
       console.log(`- POST http://localhost:${PORT}/api/manufacturers/resend-otp`);
       console.log(`- GET  http://localhost:${PORT}/api/manufacturers/me`);
       console.log(`- POST http://localhost:${PORT}/api/admin/login`);

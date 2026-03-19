@@ -12,16 +12,21 @@ export default function ManufacturerOtp({
   onBack,
 }) {
   return (
-    <div className="min-h-screen bg-slate-100 px-4 py-10 text-slate-900 sm:px-6 lg:px-8">
+    <div className="page-shell px-4 py-10 sm:px-6 lg:px-8">
+      <div className="background-nebula" />
+      <div className="pointer-events-none absolute inset-0">
+        <div className="ambient-orb left-12 top-16 h-56 w-56 bg-sky-200/75" />
+        <div className="ambient-orb bottom-8 right-10 h-72 w-72 bg-cyan-100/80" style={{ animationDelay: "1.4s" }} />
+      </div>
       <div className="mx-auto max-w-md">
         <button
           onClick={onBack}
-          className="mb-6 inline-flex items-center text-sm text-slate-600 transition hover:text-slate-900"
+          className="secondary-btn mb-6 px-4 py-2 text-sm"
         >
           <ArrowLeft className="mr-2 h-4 w-4" /> Back
         </button>
 
-        <div className="rounded-2xl border border-slate-200 bg-white p-7 shadow-sm">
+        <div className="hero-card rounded-[2rem] p-7">
           <div className="mb-5 flex items-center gap-2">
             <KeyRound className="h-6 w-6 text-sky-700" />
             <h1 className="text-2xl font-semibold">OTP Verification</h1>
@@ -49,7 +54,7 @@ export default function ManufacturerOtp({
                 setOtpCode(e.target.value.replace(/\D/g, "").slice(0, 6))
               }
               placeholder="Enter 6-digit OTP"
-              className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm outline-none ring-sky-200 transition focus:ring"
+              className="input-field text-center tracking-[0.35em]"
             />
 
             {error && <p className="text-sm text-rose-600">{error}</p>}
@@ -57,7 +62,7 @@ export default function ManufacturerOtp({
             <button
               onClick={onVerify}
               disabled={loading}
-              className="w-full rounded-xl bg-slate-900 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-400 disabled:text-slate-100"
+              className="primary-btn w-full disabled:cursor-not-allowed disabled:opacity-60"
             >
               {loading ? "Verifying..." : "Verify OTP"}
             </button>
@@ -65,7 +70,7 @@ export default function ManufacturerOtp({
             <button
               onClick={onResend}
               disabled={loading}
-              className="inline-flex w-full items-center justify-center rounded-xl border border-slate-300 bg-white px-5 py-3 text-sm font-medium text-slate-700 transition hover:border-slate-400 disabled:cursor-not-allowed disabled:text-slate-500"
+              className="secondary-btn w-full disabled:cursor-not-allowed disabled:opacity-60"
             >
               <RefreshCcw className="mr-2 h-4 w-4" />
               Resend OTP

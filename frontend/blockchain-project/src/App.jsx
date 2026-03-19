@@ -4,6 +4,8 @@ import ManufacturerLogin from "./components/ManufacturerLogin";
 import ManufacturerOtp from "./components/ManufacturerOtp";
 import ManufacturerSignup from "./components/ManufacturerSignup";
 import ManufacturerDashboard from "./components/ManufacturerDashboard";
+import ManufacturerForgotPassword from "./components/ManufacturerForgotPassword";
+import ManufacturerResetPassword from "./components/ManufacturerResetPassword";
 import AdminLogin from "./components/AdminLogin";
 import AdminDashboard from "./components/AdminDashboard";
 
@@ -51,16 +53,24 @@ export default function App() {
     email: "",
     password: "",
   });
+  const [forgotPasswordEmail, setForgotPasswordEmail] = useState("");
+  const [resetPasswordForm, setResetPasswordForm] = useState({
+    newPassword: "",
+    confirmPassword: "",
+  });
 
   const [loadingAuth, setLoadingAuth] = useState(false);
   const [loginError, setLoginError] = useState("");
   const [signupError, setSignupError] = useState("");
   const [otpError, setOtpError] = useState("");
   const [adminError, setAdminError] = useState("");
+  const [forgotPasswordError, setForgotPasswordError] = useState("");
+  const [resetPasswordError, setResetPasswordError] = useState("");
   const [otpCode, setOtpCode] = useState("");
   const [otpFlow, setOtpFlow] = useState(null);
   const [activeManufacturer, setActiveManufacturer] = useState(null);
   const [activeAdmin, setActiveAdmin] = useState(null);
+  const [resetToken, setResetToken] = useState("");
   const [authToken, setAuthToken] = useState(
     () => window.localStorage.getItem(MANUFACTURER_TOKEN_KEY) || ""
   );
@@ -397,6 +407,49 @@ export default function App() {
     }
   };
 
+  const handleForgotPassword = async () => {
+    setForgotPasswordError("");
+
+    if (!forgotPasswordEmail.trim()) {
+      setForgotPasswordError("Email is required.");
+      return;
+    }
+
+    setLoadingAuth(true);
+    try {
+      const response = await fetch(`${API_BASE_URL}/manufacturers/forgot-password`, {
+        method: "POST",
+        headers: REQUEST_HEADERS,
+        body: JSON.stringify({
+          email: forgotPasswordEmail.trim(),
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        setForgotPasswordError(data.error || "Failed to send reset OTP.");
+        return;
+      }
+
+      setOtpCode("");
+      setOtpError("");
+      setOtpFlow({
+        purpose: "password-reset",
+        email: forgotPasswordEmail.trim().toLowerCase(),
+        message: data.message,
+        devOtp: data.devOtp || "",
+      });
+      setView("manufacturer-otp");
+    } catch (error) {
+      setForgotPasswordError(
+        "Unable to start password reset. Make sure the backend is running."
+      );
+    } finally {
+      setLoadingAuth(false);
+    }
+  };
+
   const handleVerifyOtp = async () => {
     setOtpError("");
 
@@ -415,7 +468,9 @@ export default function App() {
       const route =
         otpFlow.purpose === "signup"
           ? "/manufacturers/verify-signup-otp"
-          : "/manufacturers/verify-login-otp";
+          : otpFlow.purpose === "password-reset"
+            ? "/manufacturers/verify-reset-otp"
+            : "/manufacturers/verify-login-otp";
 
       const response = await fetch(`${API_BASE_URL}${route}`, {
         method: "POST",
@@ -430,6 +485,16 @@ export default function App() {
 
       if (!response.ok) {
         setOtpError(data.error || "OTP verification failed.");
+        return;
+      }
+
+      if (otpFlow.purpose === "password-reset") {
+        setResetToken(data.resetToken || "");
+        setOtpFlow(null);
+        setOtpCode("");
+        setResetPasswordError("");
+        setResetPasswordForm({ newPassword: "", confirmPassword: "" });
+        setView("manufacturer-reset-password");
         return;
       }
 
@@ -483,6 +548,53 @@ export default function App() {
       );
     } catch (error) {
       setOtpError("Unable to resend OTP. Make sure the backend is running.");
+    } finally {
+      setLoadingAuth(false);
+    }
+  };
+
+  const handleResetPassword = async () => {
+    setResetPasswordError("");
+
+    if (!resetPasswordForm.newPassword || !resetPasswordForm.confirmPassword) {
+      setResetPasswordError("Both password fields are required.");
+      return;
+    }
+
+    if (resetPasswordForm.newPassword !== resetPasswordForm.confirmPassword) {
+      setResetPasswordError("Password and confirm password do not match.");
+      return;
+    }
+
+    setLoadingAuth(true);
+    try {
+      const response = await fetch(`${API_BASE_URL}/manufacturers/reset-password`, {
+        method: "POST",
+        headers: REQUEST_HEADERS,
+        body: JSON.stringify({
+          resetToken,
+          newPassword: resetPasswordForm.newPassword,
+          confirmPassword: resetPasswordForm.confirmPassword,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        setResetPasswordError(data.error || "Failed to reset password.");
+        return;
+      }
+
+      setResetToken("");
+      setResetPasswordForm({ newPassword: "", confirmPassword: "" });
+      setForgotPasswordEmail("");
+      setLoginForm((prev) => ({ ...prev, password: "" }));
+      setLoginError("");
+      setView("manufacturer-login");
+    } catch (error) {
+      setResetPasswordError(
+        "Unable to reset password. Make sure the backend is running."
+      );
     } finally {
       setLoadingAuth(false);
     }
@@ -583,6 +695,12 @@ export default function App() {
           setLoginError("");
           setView("manufacturer-signup");
         }}
+        onForgotPassword={() => {
+          setLoginError("");
+          setForgotPasswordError("");
+          setForgotPasswordEmail(loginForm.email.trim());
+          setView("manufacturer-forgot-password");
+        }}
         loading={loadingAuth}
         loginError={loginError}
       />
@@ -604,10 +722,45 @@ export default function App() {
           setOtpCode("");
           if (otpFlow?.purpose === "signup") {
             setView("manufacturer-signup");
+          } else if (otpFlow?.purpose === "password-reset") {
+            setForgotPasswordError("");
+            setView("manufacturer-forgot-password");
           } else {
             setView("manufacturer-login");
           }
         }}
+      />
+    );
+  }
+
+  if (view === "manufacturer-forgot-password") {
+    return (
+      <ManufacturerForgotPassword
+        email={forgotPasswordEmail}
+        setEmail={setForgotPasswordEmail}
+        onSubmit={handleForgotPassword}
+        onBack={() => {
+          setForgotPasswordError("");
+          setView("manufacturer-login");
+        }}
+        loading={loadingAuth}
+        error={forgotPasswordError}
+      />
+    );
+  }
+
+  if (view === "manufacturer-reset-password") {
+    return (
+      <ManufacturerResetPassword
+        form={resetPasswordForm}
+        setForm={setResetPasswordForm}
+        onSubmit={handleResetPassword}
+        onBack={() => {
+          setResetPasswordError("");
+          setView("manufacturer-forgot-password");
+        }}
+        loading={loadingAuth}
+        error={resetPasswordError}
       />
     );
   }
@@ -626,6 +779,12 @@ export default function App() {
           setSignupError("");
           setView("home");
         }}
+        onForgotPassword={() => {
+          setSignupError("");
+          setForgotPasswordError("");
+          setForgotPasswordEmail(signupForm.officialEmail.trim());
+          setView("manufacturer-forgot-password");
+        }}
         loading={loadingAuth}
         error={signupError}
       />
@@ -637,6 +796,10 @@ export default function App() {
       <ManufacturerDashboard
         manufacturer={activeManufacturer}
         authToken={authToken}
+        onBackHome={() => {
+          setView("home");
+          setHashRoute("#/");
+        }}
         onLogout={logoutManufacturer}
       />
     );
