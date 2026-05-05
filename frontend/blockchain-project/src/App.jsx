@@ -72,10 +72,10 @@ export default function App() {
   const [activeAdmin, setActiveAdmin] = useState(null);
   const [resetToken, setResetToken] = useState("");
   const [authToken, setAuthToken] = useState(
-    () => window.localStorage.getItem(MANUFACTURER_TOKEN_KEY) || ""
+    () => window.localStorage.getItem(MANUFACTURER_TOKEN_KEY) || "",
   );
   const [adminToken, setAdminToken] = useState(
-    () => window.localStorage.getItem(ADMIN_TOKEN_KEY) || ""
+    () => window.localStorage.getItem(ADMIN_TOKEN_KEY) || "",
   );
 
   useEffect(() => {
@@ -188,11 +188,11 @@ export default function App() {
 
   const normalizedImei = useMemo(
     () => verificationInput.replace(/\D/g, "").slice(0, 15),
-    [verificationInput]
+    [verificationInput],
   );
   const normalizedMac = useMemo(
     () => verificationInput.trim().replace(/-/g, ":").toUpperCase(),
-    [verificationInput]
+    [verificationInput],
   );
 
   const checkHealth = async () => {
@@ -234,7 +234,7 @@ export default function App() {
     setVerifying(true);
     try {
       const response = await fetch(
-        `${API_BASE_URL}/verify-product/${verificationType}/${encodeURIComponent(identifierValue)}`
+        `${API_BASE_URL}/verify-product/${verificationType}/${encodeURIComponent(identifierValue)}`,
       );
       const data = await response.json();
 
@@ -247,7 +247,7 @@ export default function App() {
       } else {
         setVerificationResult({
           type: "error",
-          message: data.message || data.error || "Product not found on-chain.",
+          message: "Product is Counterfeit.",
         });
       }
     } catch (error) {
@@ -375,7 +375,7 @@ export default function App() {
         if (typeof data.loginAttemptsRemaining === "number") {
           setLoginError(
             data.error ||
-              `Login failed. ${data.loginAttemptsRemaining} attempts remaining.`
+              `Login failed. ${data.loginAttemptsRemaining} attempts remaining.`,
           );
         } else {
           setLoginError(data.error || "Login failed.");
@@ -417,13 +417,16 @@ export default function App() {
 
     setLoadingAuth(true);
     try {
-      const response = await fetch(`${API_BASE_URL}/manufacturers/forgot-password`, {
-        method: "POST",
-        headers: REQUEST_HEADERS,
-        body: JSON.stringify({
-          email: forgotPasswordEmail.trim(),
-        }),
-      });
+      const response = await fetch(
+        `${API_BASE_URL}/manufacturers/forgot-password`,
+        {
+          method: "POST",
+          headers: REQUEST_HEADERS,
+          body: JSON.stringify({
+            email: forgotPasswordEmail.trim(),
+          }),
+        },
+      );
 
       const data = await response.json();
 
@@ -443,7 +446,7 @@ export default function App() {
       setView("manufacturer-otp");
     } catch (error) {
       setForgotPasswordError(
-        "Unable to start password reset. Make sure the backend is running."
+        "Unable to start password reset. Make sure the backend is running.",
       );
     } finally {
       setLoadingAuth(false);
@@ -544,7 +547,7 @@ export default function App() {
               message: data.message,
               devOtp: data.devOtp || "",
             }
-          : prev
+          : prev,
       );
     } catch (error) {
       setOtpError("Unable to resend OTP. Make sure the backend is running.");
@@ -568,15 +571,18 @@ export default function App() {
 
     setLoadingAuth(true);
     try {
-      const response = await fetch(`${API_BASE_URL}/manufacturers/reset-password`, {
-        method: "POST",
-        headers: REQUEST_HEADERS,
-        body: JSON.stringify({
-          resetToken,
-          newPassword: resetPasswordForm.newPassword,
-          confirmPassword: resetPasswordForm.confirmPassword,
-        }),
-      });
+      const response = await fetch(
+        `${API_BASE_URL}/manufacturers/reset-password`,
+        {
+          method: "POST",
+          headers: REQUEST_HEADERS,
+          body: JSON.stringify({
+            resetToken,
+            newPassword: resetPasswordForm.newPassword,
+            confirmPassword: resetPasswordForm.confirmPassword,
+          }),
+        },
+      );
 
       const data = await response.json();
 
@@ -593,7 +599,7 @@ export default function App() {
       setView("manufacturer-login");
     } catch (error) {
       setResetPasswordError(
-        "Unable to reset password. Make sure the backend is running."
+        "Unable to reset password. Make sure the backend is running.",
       );
     } finally {
       setLoadingAuth(false);
@@ -632,7 +638,9 @@ export default function App() {
       setHashRoute("#/admin/dashboard");
       setView("admin-dashboard");
     } catch (error) {
-      setAdminError("Unable to login as admin. Make sure the backend is running.");
+      setAdminError(
+        "Unable to login as admin. Make sure the backend is running.",
+      );
     } finally {
       setLoadingAuth(false);
     }
@@ -809,7 +817,9 @@ export default function App() {
     <HomePage
       onManufacturerLogin={() => setView("manufacturer-login")}
       checkIdentifier={handleVerifyIdentifier}
-      verificationInput={verificationType === "imei" ? normalizedImei : verificationInput}
+      verificationInput={
+        verificationType === "imei" ? normalizedImei : verificationInput
+      }
       setVerificationInput={setVerificationInput}
       verificationType={verificationType}
       setVerificationType={setVerificationType}

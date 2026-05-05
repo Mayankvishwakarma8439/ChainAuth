@@ -9,7 +9,7 @@ const crypto = require("crypto");
 const mongoose = require("mongoose");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
-const { Resend } = require("resend");
+const nodemailer = require("nodemailer");
 
 const Manufacturer = require("./models/Manufacturer");
 
@@ -33,9 +33,12 @@ const LOGIN_MAX_ATTEMPTS = Number(process.env.LOGIN_MAX_ATTEMPTS) || 5;
 const LOGIN_LOCK_MINUTES = Number(process.env.LOGIN_LOCK_MINUTES) || 15;
 const PASSWORD_RESET_TOKEN_EXPIRY_MINUTES =
   Number(process.env.PASSWORD_RESET_TOKEN_EXPIRY_MINUTES) || 10;
-const RESEND_API_KEY = process.env.RESEND_API_KEY || "";
-const RESEND_FROM_EMAIL =
-  process.env.RESEND_FROM_EMAIL || "onboarding@resend.dev";
+const MAIL_FROM = process.env.MAIL_FROM || process.env.SMTP_USER || "";
+const SMTP_HOST = process.env.SMTP_HOST || "smtp.gmail.com";
+const SMTP_PORT = Number(process.env.SMTP_PORT) || 465;
+const SMTP_SECURE = String(process.env.SMTP_SECURE || "true") === "true";
+const SMTP_USER = process.env.SMTP_USER || "";
+const SMTP_PASS = process.env.SMTP_PASS || "";
 const OTP_DEV_BYPASS = process.env.OTP_DEV_BYPASS === "true";
 const ADMIN_API_KEY = process.env.ADMIN_API_KEY || "";
 const ADMIN_EMAIL =
@@ -54,7 +57,7 @@ const contractABI = contractJson.abi;
 let contractAddress = process.env.CONTRACT_ADDRESS || null;
 let contract = null;
 let accounts = [];
-let resendClient = null;
+let mailTransporter = null;
 
 function sanitizeManufacturer(record) {
   if (!record) return null;
@@ -110,9 +113,9 @@ function buildOtpResponse(message, devOtp) {
 }
 
 async function sendOtpEmail(to, otp, purpose) {
-  if (!resendClient) {
+  if (!mailTransporter) {
     console.log(
-      `[OTP:${purpose}] No Resend credentials configured. OTP for ${to}: ${otp}`
+      `[OTP:${purpose}] No SMTP credentials configured. OTP for ${to}: ${otp}`
     );
     return;
   }
@@ -141,8 +144,8 @@ async function sendOtpEmail(to, otp, purpose) {
     </div>
   `;
 
-  await resendClient.emails.send({
-    from: RESEND_FROM_EMAIL,
+  await mailTransporter.sendMail({
+    from: MAIL_FROM || SMTP_USER,
     to,
     subject,
     html,
@@ -1273,7 +1276,18 @@ app.get("/api/health", (req, res) => {
 
 async function startServer() {
   try {
-    resendClient = RESEND_API_KEY ? new Resend(RESEND_API_KEY) : null;
+    mailTransporter =
+      SMTP_USER && SMTP_PASS
+        ? nodemailer.createTransport({
+            host: SMTP_HOST,
+            port: SMTP_PORT,
+            secure: SMTP_SECURE,
+            auth: {
+              user: SMTP_USER,
+              pass: SMTP_PASS,
+            },
+          })
+        : null;
     await connectDatabase();
     await initContract();
 

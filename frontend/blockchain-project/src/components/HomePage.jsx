@@ -100,7 +100,10 @@ export default function HomePage({
       return rawValue.replace(/\D/g, "").slice(0, 15);
     }
 
-    const hexOnly = rawValue.toUpperCase().replace(/[^0-9A-F]/g, "").slice(0, 12);
+    const hexOnly = rawValue
+      .toUpperCase()
+      .replace(/[^0-9A-F]/g, "")
+      .slice(0, 12);
     return hexOnly.match(/.{1,2}/g)?.join(":") || "";
   };
 
@@ -114,7 +117,7 @@ export default function HomePage({
   const manualContent = {
     imei: {
       title: "How to Find Your IMEI Number",
-      example: "Example IMEI: 490154203237518",
+      example: "Example IMEI: 1234XXXXXXXXXXX",
       steps: [
         "Android phone: Open the Phone app and dial *#06#. Your IMEI usually appears immediately.",
         "iPhone: Open Settings > General > About, then scroll down to IMEI.",
@@ -222,10 +225,7 @@ export default function HomePage({
             </p>
 
             <div className="mt-8 flex flex-wrap gap-3">
-              <button
-                onClick={onManufacturerLogin}
-                className="primary-btn"
-              >
+              <button onClick={onManufacturerLogin} className="primary-btn">
                 Launch Manufacturer Portal{" "}
                 <ArrowRight className="ml-2 h-4 w-4" />
               </button>
@@ -269,10 +269,7 @@ export default function HomePage({
 
             <div className="mt-5 grid gap-4">
               {stats.map((item) => (
-                <div
-                  key={item.label}
-                  className="metric-card"
-                >
+                <div key={item.label} className="metric-card">
                   <p className="text-xs uppercase tracking-wider text-slate-600">
                     {item.label}
                   </p>
@@ -288,9 +285,7 @@ export default function HomePage({
         <section id="roles" className="mt-16">
           <div className="mb-6 flex items-end justify-between gap-3">
             <div>
-              <p className="section-kicker">
-                Role Portals
-              </p>
+              <p className="section-kicker">Role Portals</p>
               <h2 className="mt-3 text-2xl font-semibold sm:text-3xl">
                 Purpose-Built Access for Each Stakeholder
               </h2>
@@ -307,8 +302,8 @@ export default function HomePage({
                 Manufacturer Portal
               </h3>
               <p className="mt-2 text-sm text-slate-600">
-                Register electronic device identity, attach a trusted identifier, and initialize
-                trusted blockchain records.
+                Register electronic device identity, attach a trusted
+                identifier, and initialize trusted blockchain records.
               </p>
               <p className="mt-4 text-sm font-medium text-sky-700 group-hover:text-sky-800">
                 Open login <ArrowRight className="ml-1 inline h-4 w-4" />
@@ -333,9 +328,7 @@ export default function HomePage({
         </section>
 
         <section id="workflow" className="mt-16">
-          <p className="section-kicker">
-            Workflow
-          </p>
+          <p className="section-kicker">Workflow</p>
           <h2 className="mt-3 text-2xl font-semibold sm:text-3xl">
             How the System Tracks Supply Chain and Detects Counterfeit Devices
           </h2>
@@ -383,9 +376,7 @@ export default function HomePage({
               <button
                 onClick={() => setVerificationType("imei")}
                 className={`tab-chip ${
-                  verificationType === "imei"
-                    ? "tab-chip-active"
-                    : ""
+                  verificationType === "imei" ? "tab-chip-active" : ""
                 }`}
               >
                 <Smartphone className="mr-2 inline h-4 w-4" /> IMEI
@@ -393,9 +384,7 @@ export default function HomePage({
               <button
                 onClick={() => setVerificationType("mac")}
                 className={`tab-chip ${
-                  verificationType === "mac"
-                    ? "tab-chip-active"
-                    : ""
+                  verificationType === "mac" ? "tab-chip-active" : ""
                 }`}
               >
                 <Wifi className="mr-2 inline h-4 w-4" /> MAC Address
@@ -412,7 +401,11 @@ export default function HomePage({
               <input
                 type="text"
                 value={verificationInput}
-                onChange={(e) => setVerificationInput(normalizeVerificationInput(e.target.value))}
+                onChange={(e) =>
+                  setVerificationInput(
+                    normalizeVerificationInput(e.target.value),
+                  )
+                }
                 inputMode={verificationType === "imei" ? "numeric" : "text"}
                 maxLength={verificationType === "imei" ? 15 : 17}
                 placeholder={
@@ -496,10 +489,6 @@ export default function HomePage({
                       <span className="text-slate-600">Identifier Value:</span>{" "}
                       {verificationResult.data.identifierValue}
                     </p>
-                    <p>
-                      <span className="text-slate-600">Manufacturer:</span>{" "}
-                      {verificationResult.data.manufacturer}
-                    </p>
                   </div>
                 )}
               </div>
@@ -508,9 +497,7 @@ export default function HomePage({
         </section>
 
         <section className="mt-16">
-          <p className="section-kicker">
-            Security Pillars
-          </p>
+          <p className="section-kicker">Security Pillars</p>
           <h2 className="mt-3 text-2xl font-semibold sm:text-3xl">
             Built for High-Trust Supply Chain Authentication
           </h2>
@@ -543,10 +530,7 @@ export default function HomePage({
                 electronic device batch on-chain.
               </p>
             </div>
-            <button
-              onClick={onManufacturerLogin}
-              className="primary-btn"
-            >
+            <button onClick={onManufacturerLogin} className="primary-btn">
               Open Manufacturer Portal <ArrowRight className="ml-2 h-4 w-4" />
             </button>
           </div>
@@ -615,7 +599,8 @@ export default function HomePage({
             </div>
 
             <p className="mt-5 text-sm text-slate-600">
-              Tip: Mobile phones usually use IMEI, while Wi-Fi enabled devices, laptops, and network hardware often use MAC address.
+              Tip: Mobile phones usually use IMEI, while Wi-Fi enabled devices,
+              laptops, and network hardware often use MAC address.
             </p>
           </div>
         </div>
